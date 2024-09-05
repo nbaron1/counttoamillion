@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function App() {
   const [count, setCount] = useState(0);
   const [newCount, setNewCount] = useState(0);
+
+  const websocketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const socket = new WebSocket('ws://localhost:8787/websocket');
@@ -10,17 +12,44 @@ function App() {
     // Connection opened
     socket.addEventListener('open', (event) => {
       console.log('Connected to server', event);
-      socket.send('Hello Server!');
+
+      socket.send(JSON.stringify({ type: 'initial' }));
+    });
+
+    socket.addEventListener('error', (error) => {
+      console.log('Error connecting to server', error);
+    });
+
+    socket.addEventListener('close', (event) => {
+      // TODO: handle reconnection
+      console.log('Connection closed', event);
     });
 
     // Listen for messages
     socket.addEventListener('message', (event) => {
       console.log('Message from server ', event.data);
+      try {
+        const parsedData = JSON.parse(event.data as string);
+
+        if ('count' in parsedData) {
+          setCount(parsedData.count);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     });
+
+    websocketRef.current = socket;
   }, []);
 
   const handleSubmit = async () => {
-    console.log('handleSubmit', newCount);
+    const websocket = websocketRef.current;
+
+    if (!websocket) {
+      return;
+    }
+
+    websocket.send(JSON.stringify({ count: newCount }));
   };
 
   return (

@@ -35,6 +35,9 @@ export interface Env {
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
 export class WebSocketServer extends DurableObject {
+	// private sessions: Map<string, WebSocket>;
+	private connections: WebSocket[] = [];
+
 	async getCounterValue() {
 		let value = (await this.ctx.storage.get('value')) || 0;
 		return value;
@@ -49,6 +52,11 @@ export class WebSocketServer extends DurableObject {
 		await this.ctx.storage.put('value', newValue);
 
 		return newValue;
+	}
+
+	async setCounterValue(value: number) {
+		console.log('Setting value to', value);
+		await this.ctx.storage.put('value', value);
 	}
 
 	/**
@@ -81,20 +89,67 @@ export class WebSocketServer extends DurableObject {
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 
+		// this.sessions.set()
+		this.connections.push(server);
+
 		// Calling `accept()` tells the runtime that this WebSocket is to begin terminating
 		// request within the Durable Object. It has the effect of "accepting" the connection,
 		// and allowing the WebSocket to send and receive messages.
 		server.accept();
 
+		// server.addEventListener('open', async (event) => {
+		// 	console.log('WebSocket connection opened');
+		// 	const count = await this.getCounterValue();
+		// 	server.send(JSON.stringify({ hello: 'true' }));
+		// });
+
 		// Upon receiving a message from the client, the server replies with the same message,
 		// and the total number of connections with the "[Durable Object]: " prefix
-		server.addEventListener('message', (event) => {
-			server.send(`[Durable Object] ${event.data}`);
+		server.addEventListener('message', async (event) => {
+			try {
+				console.log('Num of connections', this.connections.length);
+
+				const parsedData = JSON.parse(event.data as string);
+				console.log(event.data);
+
+				// todo: handle different types of message
+				// -> count
+				// -> request initial count
+
+				if (parsedData.type === 'initial') {
+					server.send(JSON.stringify({ count: await this.getCounterValue() }));
+					return;
+				}
+
+				if ('count' in parsedData && typeof parsedData.count === 'number') {
+					console.log('count', parsedData.count);
+					await this.setCounterValue(parsedData.count);
+
+					const updatedCount = await this.getCounterValue();
+
+					this.connections.forEach((connection) => {
+						// check if connection is still open
+						try {
+							connection.send(JSON.stringify({ count: updatedCount }));
+						} catch (error) {
+							console.error('Error sending message to client', error);
+						}
+					});
+				}
+			} catch (error) {
+				console.error(error);
+			}
 		});
 
 		// If the client closes the connection, the runtime will close the connection too.
 		server.addEventListener('close', (cls) => {
+			this.connections = this.connections.filter((connection) => connection !== server);
 			server.close(cls.code, 'Durable Object is closing WebSocket');
+		});
+
+		server.addEventListener('error', (error) => {
+			this.connections = this.connections.filter((connection) => connection !== server);
+			console.error('WebSocket error', error);
 		});
 
 		return new Response(null, {
