@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 
 function NumberElement({
   number,
@@ -8,24 +9,34 @@ function NumberElement({
   isHighestNumber: boolean;
 }) {
   const hasAnimated = useRef(false);
+  const ref = useRef<HTMLParagraphElement | null>(null);
 
   useEffect(() => {
-    if (hasAnimated.current) {
+    const element = ref.current;
+
+    if (hasAnimated.current || !element) {
       return;
     }
 
     console.log(`Animating ${number}`);
+
+    element.style.opacity = '0';
+
     hasAnimated.current = true;
   }, [number]);
 
   const className = isHighestNumber
-    ? 'text-gray-50  w-16'
+    ? 'text-gray-50 w-16'
     : 'text-gray-500 w-16';
 
   return (
-    <p className={className} key={number}>
+    <motion.p
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={className}
+    >
       {number}
-    </p>
+    </motion.p>
   );
 }
 
@@ -178,7 +189,10 @@ function App() {
           siteKey='0x4AAAAAAALvq89KRwrAjqSU'
           onSuccess={() => console.log('success')}
         /> */}
-        <div className='fixed top-1/2 -translate-y-1/2 -translate-x-1/2 right-1/2 gap-8 text-[64px] flex'>
+        <motion.div
+          layout='position'
+          className='fixed top-1/2 -translate-y-1/2 right-[50vw] gap-8 text-[64px] flex'
+        >
           {[...elementsSorted].map((number) => (
             <NumberElement
               key={number}
@@ -186,7 +200,7 @@ function App() {
               isHighestNumber={highestNumber === number}
             />
           ))}
-        </div>
+        </motion.div>
         <div className='fixed border border-gray-600 justify-between bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-6 py-3 rounded-xl'>
           <input
             placeholder='Write a number'
