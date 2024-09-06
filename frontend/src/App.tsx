@@ -176,6 +176,14 @@ function App() {
 
   const elementsSorted = Array.from(elements).sort((a, b) => a - b);
 
+  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
+    event
+  ) => {
+    if (event.key === 'Enter') {
+      handleSubmit();
+    }
+  };
+
   return (
     <div>
       {/* <p>Current count: {count}</p> */}
@@ -207,6 +215,7 @@ function App() {
             autoFocus
             ref={inputRef}
             value={inputValue}
+            onKeyDown={handleKeyDown}
             className='w-60 text-white bg-transparent outline-none text-xl'
             onChange={(event) => setInputValue(event.target.value)}
           />
