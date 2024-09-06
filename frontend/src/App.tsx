@@ -26,8 +26,8 @@ function NumberElement({
   }, [number]);
 
   const className = isHighestNumber
-    ? 'text-gray-50 w-16'
-    : 'text-gray-500 w-16';
+    ? 'text-gray-50 min-w-16'
+    : 'text-gray-500 min-w-16';
 
   return (
     <motion.p
@@ -41,7 +41,6 @@ function NumberElement({
 }
 
 function App() {
-  const [count, setCount] = useState(0);
   const [inputValue, setInputValue] = useState('');
 
   const websocketRef = useRef<WebSocket | null>(null);
@@ -84,13 +83,18 @@ function App() {
         switch (parsedData.type) {
           case 'count-updated': {
             if (elements.size === 0) {
-              const previousElements = Array.from(
-                { length: 10 },
-                (_, i) => count - i
+              const previousElements = Array.from({ length: 10 }).map(
+                (_, i) => parsedData.count - i
               );
 
               const previousElementsGreaterOrEqualToZero =
                 previousElements.filter((value) => value >= 0);
+
+              console.log({
+                previousElementsGreaterOrEqualToZero,
+                previousElements,
+                count: parsedData.count,
+              });
 
               setElements(new Set([...previousElementsGreaterOrEqualToZero]));
 
@@ -116,8 +120,6 @@ function App() {
               );
             }
 
-            setCount(parsedData.count);
-
             break;
           }
           case 'failed': {
@@ -135,7 +137,7 @@ function App() {
     });
 
     websocketRef.current = socket;
-  }, [count, elements]);
+  }, [elements]);
 
   const handleSubmit = async () => {
     const websocket = websocketRef.current;
@@ -169,6 +171,7 @@ function App() {
     inputRef.current?.focus();
   };
 
+  console.log({ elements });
   const highestNumber = useMemo(() => Math.max(...elements), [elements]);
 
   const elementsSorted = Array.from(elements).sort((a, b) => a - b);
@@ -189,10 +192,7 @@ function App() {
           siteKey='0x4AAAAAAALvq89KRwrAjqSU'
           onSuccess={() => console.log('success')}
         /> */}
-        <motion.div
-          layout='position'
-          className='fixed top-1/2 -translate-y-1/2 right-[50vw] gap-8 text-[64px] flex'
-        >
+        <div className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'>
           {[...elementsSorted].map((number) => (
             <NumberElement
               key={number}
@@ -200,7 +200,7 @@ function App() {
               isHighestNumber={highestNumber === number}
             />
           ))}
-        </motion.div>
+        </div>
         <div className='fixed border border-gray-600 justify-between bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-6 py-3 rounded-xl'>
           <input
             placeholder='Write a number'
