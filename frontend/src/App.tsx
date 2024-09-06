@@ -3,6 +3,7 @@ import { motion, useAnimate } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import './dialog.css';
+import './hide-scrollbar.css';
 
 function NumberElement({
   number,
@@ -41,6 +42,7 @@ function FailedNumberElement({ number }: { number: number }) {
 function CloseIcon() {
   return (
     <svg
+      className='w-6 sm:w-7'
       width='24'
       height='25'
       viewBox='0 0 24 25'
@@ -110,8 +112,8 @@ type Attempt = { max_count: number; id: number; created_at: string };
 function PreviousAttempt({ attempt }: { attempt: Attempt }) {
   return (
     <div className='flex flex-col'>
-      <p className='text-gray-50'>{attempt.max_count}</p>
-      <p className='text-gray-400'>{attempt.created_at}</p>
+      <p className='text-gray-50 text-lg sm:text-xl'>{attempt.max_count}</p>
+      <p className='text-gray-400 text-lg'>{attempt.created_at}</p>
     </div>
   );
 }
@@ -130,10 +132,11 @@ function PreviousAttemptDialogPage({
   const { data, hasNextPage } = useAttempts({ page, filter });
 
   return (
-    <div className='flex flex-col gap-6'>
+    <div className='flex flex-col gap-4'>
       {data.map((attempt) => (
         <PreviousAttempt attempt={attempt} key={attempt.id} />
       ))}
+
       {isLastPage && hasNextPage && (
         <button
           className='bg-gray-800 py-2 text-gray-50 border border-gray-700 rounded'
@@ -152,7 +155,7 @@ function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
 
   return (
     <>
-      <div className='flex flex-col max-h-72 overflow-y-scroll gap-6'>
+      <div className='flex flex-col max-h-72 overflow-y-scroll gap-4'>
         {Array.from({ length: pages }).map((_, i) => (
           <PreviousAttemptDialogPage
             key={i}
@@ -163,6 +166,7 @@ function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
           />
         ))}
       </div>
+      <div id='load-more'></div>
     </>
   );
 }
@@ -187,7 +191,7 @@ function PreviousAttemptsDialog() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className='DialogOverlay fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='DialogContent flex gap-8 flex-col px-5 py-6 rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+        <Dialog.Content className='DialogContent flex gap-8 sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <Dialog.Title className='text-gray-50 text-2xl'>
@@ -200,7 +204,7 @@ function PreviousAttemptsDialog() {
             <RadioGroup.Root
               value={type}
               onValueChange={handleValueChange}
-              className='bg-gray-900  border border-gray-800 rounded px-2 flex py-[6px]'
+              className='bg-gray-900 border border-gray-800 rounded-lg px-2 flex py-[6px]'
             >
               <RadioGroup.Item
                 className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded'
@@ -417,7 +421,7 @@ function App() {
   return (
     <div ref={scope}>
       {/* <p>Current count: {count}</p> */}
-      <div className='fixed top-6 flex-col left-6 text-lg text-gray-50 flex'>
+      <div className='fixed sm:right-6 sm:flex-row sm:justify-between top-6 flex-col left-6 text-lg text-gray-50 flex'>
         <p>High score: {highscore}</p>
         <PreviousAttemptsDialog />
       </div>
