@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useAnimate } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as RadioGroup from '@radix-ui/react-radio-group';
 
 function NumberElement({
   number,
@@ -46,8 +47,8 @@ function CloseIcon() {
       xmlns='http://www.w3.org/2000/svg'
     >
       <path
-        fill-rule='evenodd'
-        clip-rule='evenodd'
+        fillRule='evenodd'
+        clipRule='evenodd'
         d='M6.29289 6.79289C6.68342 6.40237 7.31658 6.40237 7.70711 6.79289L12 11.0858L16.2929 6.79289C16.6834 6.40237 17.3166 6.40237 17.7071 6.79289C18.0976 7.18342 18.0976 7.81658 17.7071 8.20711L13.4142 12.5L17.7071 16.7929C18.0976 17.1834 18.0976 17.8166 17.7071 18.2071C17.3166 18.5976 16.6834 18.5976 16.2929 18.2071L12 13.9142L7.70711 18.2071C7.31658 18.5976 6.68342 18.5976 6.29289 18.2071C5.90237 17.8166 5.90237 17.1834 6.29289 16.7929L10.5858 12.5L6.29289 8.20711C5.90237 7.81658 5.90237 7.18342 6.29289 6.79289Z'
         fill='#A8A29E'
       />
@@ -67,7 +68,7 @@ if (!BACKEND_HOST) {
   throw new Error('VITE_BACKEND_HOST not found');
 }
 
-const useAttempts = (filter: 'latest' | 'highest') => {
+const useAttempts = (filter: AttemptFilter) => {
   const [attempts, setAttempts] = useState([]);
 
   useEffect(() => {
@@ -90,10 +91,46 @@ const useAttempts = (filter: 'latest' | 'highest') => {
   return attempts;
 };
 
+type Attempt = { max_count: number; id: number; created_at: string };
+
+function PreviousAttempt({ attempt }: { attempt: Attempt }) {
+  console.log(attempt);
+  return (
+    <div className='flex flex-col'>
+      <p className='text-gray-50'>{attempt.max_count}</p>
+      <p className='text-gray-400'>{attempt.created_at}</p>
+    </div>
+  );
+}
+
+function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
+  const attempts = useAttempts(type);
+
+  return (
+    <div className='flex flex-col gap-6'>
+      {attempts.map((attempt) => (
+        <PreviousAttempt attempt={attempt} />
+      ))}
+    </div>
+  );
+}
+
+type AttemptFilter = 'latest' | 'top';
+
 function PreviousAttemptsDialog() {
   const latestAttempts = useAttempts('latest');
 
   console.log({ latestAttempts });
+
+  const [type, setType] = useState<AttemptFilter>('latest');
+
+  const handleValueChange = (value: string) => {
+    if (value !== 'latest' && value !== 'top') {
+      return;
+    }
+
+    setType(value);
+  };
 
   return (
     <Dialog.Root>
@@ -102,13 +139,37 @@ function PreviousAttemptsDialog() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='flex flex-col px-5 py-6 rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
-          <div className='flex items-center justify-between'>
-            <Dialog.Title className='text-gray-50'>Attempts</Dialog.Title>
-            <Dialog.Close>
-              <CloseIcon />
-            </Dialog.Close>
+        <Dialog.Content className='flex gap-8 flex-col px-5 py-6 rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+          <div className='flex flex-col gap-4'>
+            <div className='flex items-center justify-between'>
+              <Dialog.Title className='text-gray-50 text-2xl'>
+                Attempts
+              </Dialog.Title>
+              <Dialog.Close>
+                <CloseIcon />
+              </Dialog.Close>
+            </div>
+            <RadioGroup.Root
+              value={type}
+              onValueChange={handleValueChange}
+              className='bg-gray-900  border border-gray-800 rounded px-2 flex py-[6px]'
+            >
+              <RadioGroup.Item
+                className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded'
+                value='latest'
+              >
+                Previous
+              </RadioGroup.Item>
+              <RadioGroup.Item
+                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded py-1'
+                value='top'
+              >
+                Best
+              </RadioGroup.Item>
+            </RadioGroup.Root>
           </div>
+
+          <PreviousAttemptDialogContent type={type} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

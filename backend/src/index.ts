@@ -196,8 +196,6 @@ export default {
 				return stub.fetch(request);
 			}
 			case '/v1/attempts': {
-				console.log({ method: request.method });
-
 				const responseHeaders = new Headers();
 				// tood: change allowed based on dev / prod mode
 				responseHeaders.set('Access-Control-Allow-Origin', '*');
@@ -206,8 +204,17 @@ export default {
 					return new Response('Method not allowed', { status: 405 });
 				}
 
-				// todo: add pagination
-				const query = env.DB.prepare('SELECT * FROM attempt limit 10');
+				const filter = new URL(request.url).searchParams.get('filter') ?? 'latest';
+
+				if (filter !== 'latest' && filter !== 'top') {
+					return new Response('Invalid filter', { status: 400, headers: responseHeaders });
+				}
+
+				const query =
+					filter === 'latest'
+						? env.DB.prepare('SELECT * FROM attempt ORDER BY created_at DESC LIMIT 10')
+						: env.DB.prepare('SELECT * FROM attempt ORDER BY max_count DESC, created_at DESC LIMIT 10');
+
 				const attempts = await query.all();
 
 				if (!attempts.success) {
