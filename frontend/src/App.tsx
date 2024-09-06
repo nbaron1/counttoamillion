@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 
 function App() {
   const [count, setCount] = useState(0);
-  const [inputCount, setInputCount] = useState(0);
+  const [inputValue, setInputValue] = useState('');
 
   const websocketRef = useRef<WebSocket | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const websocketHost = import.meta.env.VITE_BACKEND_HOST;
@@ -66,7 +67,28 @@ function App() {
       return;
     }
 
-    websocket.send(JSON.stringify({ type: 'update-count', count: inputCount }));
+    const inputNumberValue = Number.parseInt(inputValue, 10);
+    console.log({ inputNumberValue });
+
+    if (Number.isNaN(inputNumberValue)) {
+      console.error('Input is not a number', { input: inputValue });
+      return;
+    }
+
+    const isAnInteger = Number.isInteger(inputNumberValue);
+
+    // TODO: Error handling
+    if (!isAnInteger) {
+      console.error('Input is not an integer', { input: inputValue });
+      return;
+    }
+
+    websocket.send(
+      JSON.stringify({ type: 'update-count', count: inputNumberValue })
+    );
+
+    setInputValue('');
+    inputRef.current?.focus();
   };
 
   return (
@@ -85,23 +107,25 @@ function App() {
           siteKey='0x4AAAAAAALvq89KRwrAjqSU'
           onSuccess={() => console.log('success')}
         /> */}
-        <div className='fixed top-1/2 -translate-y-1/2 left-0 gap-5 text-[64px] flex'>
-          <p className='text-gray-500'>{count - 8}</p>
-          <p className='text-gray-500'>{count - 7}</p>
-          <p className='text-gray-500'>{count - 6}</p>
-          <p className='text-gray-500'>{count - 5}</p>
-          <p className='text-gray-500'>{count - 4}</p>
-          <p className='text-gray-500'>{count - 3}</p>
-          <p className='text-gray-500'>{count - 2}</p>
-          <p className='text-gray-500'>{count - 1}</p>
+        <div className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'>
+          <p className='text-gray-500 w-16'>{count - 8}</p>
+          <p className='text-gray-500 w-16'>{count - 7}</p>
+          <p className='text-gray-500 w-16'>{count - 6}</p>
+          <p className='text-gray-500 w-16'>{count - 5}</p>
+          <p className='text-gray-500 w-16'>{count - 4}</p>
+          <p className='text-gray-500 w-16'>{count - 3}</p>
+          <p className='text-gray-500 w-16'>{count - 2}</p>
+          <p className='text-gray-500 w-16'>{count - 1}</p>
           <p className='text-white'>{count}</p>
         </div>
         <div className='fixed border border-gray-600 justify-between bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-6 py-3 rounded-xl'>
           <input
             placeholder='Write a number'
-            className='w-60 text-white bg-transparent outline-none text-xl no-spinner'
-            type='number'
-            onChange={(event) => setInputCount(Number(event.target.value))}
+            autoFocus
+            ref={inputRef}
+            value={inputValue}
+            className='w-60 text-white bg-transparent outline-none text-xl'
+            onChange={(event) => setInputValue(event.target.value)}
           />
           <button
             type='button'
