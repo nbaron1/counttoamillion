@@ -1,4 +1,4 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject } from 'cloudflare:workers';
 
 /**
  * Welcome to Cloudflare Workers! This is your first Durable Objects application.
@@ -13,7 +13,6 @@ import { DurableObject } from "cloudflare:workers";
  * Learn more at https://developers.cloudflare.com/durable-objects
  */
 
-
 /**
  * Associate bindings declared in wrangler.toml with the TypeScript type system
  */
@@ -22,7 +21,7 @@ export interface Env {
 	// MY_KV_NAMESPACE: KVNamespace;
 	//
 	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	MY_DURABLE_OBJECT: DurableObjectNamespace<MyDurableObject>;
+	WEBSOCKET_SERVER: DurableObjectNamespace<WebSocketServer>;
 	//
 	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
 	// MY_BUCKET: R2Bucket;
@@ -35,7 +34,31 @@ export interface Env {
 }
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
-export class MyDurableObject extends DurableObject {
+export class WebSocketServer extends DurableObject {
+	// private sessions: Map<string, WebSocket>;
+	private connections: WebSocket[] = [];
+
+	async getCounterValue() {
+		let value = (await this.ctx.storage.get('value')) || 0;
+		return value;
+	}
+
+	async increment(amount = 1) {
+		const value: number = (await this.ctx.storage.get('value')) || 0;
+		// You do not have to worry about a concurrent request having modified the value in storage.
+		// "input gates" will automatically protect against unwanted concurrency.
+		// Read-modify-write is safe.
+		const newValue = value + amount;
+		await this.ctx.storage.put('value', newValue);
+
+		return newValue;
+	}
+
+	async setCounterValue(value: number) {
+		console.log('Setting value to', value);
+		await this.ctx.storage.put('value', value);
+	}
+
 	/**
 	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
 	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
@@ -55,7 +78,84 @@ export class MyDurableObject extends DurableObject {
 	 * @returns The greeting to be sent back to the Worker
 	 */
 	async sayHello(name: string): Promise<string> {
-		return `Hello, ${name}!`;
+		const counter = await this.getCounterValue();
+		await this.increment();
+
+		return `Hello, ${counter}!`;
+	}
+
+	async fetch(request: Request): Promise<Response> {
+		// Creates two ends of a WebSocket connection.
+		const webSocketPair = new WebSocketPair();
+		const [client, server] = Object.values(webSocketPair);
+
+		// this.sessions.set()
+		this.connections.push(server);
+
+		// Calling `accept()` tells the runtime that this WebSocket is to begin terminating
+		// request within the Durable Object. It has the effect of "accepting" the connection,
+		// and allowing the WebSocket to send and receive messages.
+		server.accept();
+
+		// server.addEventListener('open', async (event) => {
+		// 	console.log('WebSocket connection opened');
+		// 	const count = await this.getCounterValue();
+		// 	server.send(JSON.stringify({ hello: 'true' }));
+		// });
+
+		// Upon receiving a message from the client, the server replies with the same message,
+		// and the total number of connections with the "[Durable Object]: " prefix
+		server.addEventListener('message', async (event) => {
+			try {
+				console.log('Num of connections', this.connections.length);
+
+				const parsedData = JSON.parse(event.data as string);
+				console.log(event.data);
+
+				// todo: handle different types of message
+				// -> count
+				// -> request initial count
+
+				if (parsedData.type === 'initial') {
+					server.send(JSON.stringify({ count: await this.getCounterValue() }));
+					return;
+				}
+
+				if ('count' in parsedData && typeof parsedData.count === 'number') {
+					console.log('count', parsedData.count);
+					await this.setCounterValue(parsedData.count);
+
+					const updatedCount = await this.getCounterValue();
+
+					this.connections.forEach((connection) => {
+						// check if connection is still open
+						try {
+							connection.send(JSON.stringify({ count: updatedCount }));
+						} catch (error) {
+							console.error('Error sending message to client', error);
+						}
+					});
+				}
+			} catch (error) {
+				console.error(error);
+			}
+		});
+
+		// If the client closes the connection, the runtime will close the connection too.
+		server.addEventListener('close', (cls) => {
+			this.connections = this.connections.filter((connection) => connection !== server);
+			server.close(cls.code, 'Durable Object is closing WebSocket');
+		});
+
+		server.addEventListener('error', (error) => {
+			this.connections = this.connections.filter((connection) => connection !== server);
+			console.error('WebSocket error', error);
+		});
+
+		return new Response(null, {
+			status: 101,
+			webSocket: client,
+		});
 	}
 }
 
@@ -69,18 +169,33 @@ export default {
 	 * @returns The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx): Promise<Response> {
-		// We will create a `DurableObjectId` using the pathname from the Worker request
-		// This id refers to a unique instance of our 'MyDurableObject' class above
-		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
+		if (request.url.endsWith('/websocket')) {
+			const upgradeHeader = request.headers.get('Upgrade');
 
-		// This stub creates a communication channel with the Durable Object instance
-		// The Durable Object constructor will be invoked upon the first call for a given id
-		let stub = env.MY_DURABLE_OBJECT.get(id);
+			if (!upgradeHeader || upgradeHeader !== 'websocket') {
+				return new Response('Durable Object expected Upgrade: websocket', { status: 426 });
+			}
 
-		// We call the `sayHello()` RPC method on the stub to invoke the method on the remote
-		// Durable Object instance
-		let greeting = await stub.sayHello("world");
+			let id = env.WEBSOCKET_SERVER.idFromName('main');
+			let stub = env.WEBSOCKET_SERVER.get(id);
 
-		return new Response(greeting);
+			return stub.fetch(request);
+
+			// We will create a `DurableObjectId` using the pathname from the Worker request
+			// This id refers to a unique instance of our 'MyDurableObject' class above
+			// let id: DurableObjectId = env.WEBSOCKET_SERVER.idFromName(new URL(request.url).pathname);
+
+			// // This stub creates a communication channel with the Durable Object instance
+			// // The Durable Object constructor will be invoked upon the first call for a given id
+			// let stub = env.WEBSOCKET_SERVER.get(id);
+
+			// // We call the `sayHello()` RPC method on the stub to invoke the method on the remote
+			// // Durable Object instance
+			// let greeting = await stub.sayHello('world');
+
+			// return new Response(greeting);
+		}
+
+		return new Response('Not Found', { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
