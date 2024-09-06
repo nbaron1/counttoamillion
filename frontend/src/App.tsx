@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useAnimate } from 'framer-motion';
 
 function NumberElement({
   number,
@@ -8,32 +8,27 @@ function NumberElement({
   number: number;
   isHighestNumber: boolean;
 }) {
-  const hasAnimated = useRef(false);
-  const ref = useRef<HTMLParagraphElement | null>(null);
-
-  useEffect(() => {
-    const element = ref.current;
-
-    if (hasAnimated.current || !element) {
-      return;
-    }
-
-    console.log(`Animating ${number}`);
-
-    element.style.opacity = '0';
-
-    hasAnimated.current = true;
-  }, [number]);
-
   const className = isHighestNumber
-    ? 'text-gray-50 min-w-16'
-    : 'text-gray-500 min-w-16';
+    ? 'text-gray-50 min-w-16 text-center number-element'
+    : 'text-gray-500 min-w-16 text-center number-element';
 
   return (
     <motion.p
       initial={{ opacity: 0, y: -35 }}
       animate={{ opacity: 1, y: 0 }}
       className={className}
+    >
+      {number}
+    </motion.p>
+  );
+}
+
+function FailedNumberElement({ number }: { number: number }) {
+  return (
+    <motion.p
+      initial={{ opacity: 0, y: -35, color: '#fafaf9' }}
+      animate={{ opacity: 1, y: 0, color: '#FF4141' }}
+      className='min-w-16 text-center number-element'
     >
       {number}
     </motion.p>
@@ -47,6 +42,9 @@ function App() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [elements, setElements] = useState<Set<number>>(new Set([]));
+
+  const [scope, animate] = useAnimate();
+  const [failedNumber, setFailedNumber] = useState<null | number>(null);
 
   useEffect(() => {
     const websocketHost = import.meta.env.VITE_BACKEND_HOST;
@@ -84,27 +82,28 @@ function App() {
           case 'count-updated': {
             if (elements.size === 0) {
               const previousElements = Array.from({ length: 10 }).map(
-                (_, i) => parsedData.count - i
+                (_, i) => parsedData.value - i
               );
 
-              const previousElementsGreaterOrEqualToZero =
-                previousElements.filter((value) => value >= 0);
+              const previousElementsGreaterThanZero = previousElements.filter(
+                (value) => value > 0
+              );
 
               console.log({
-                previousElementsGreaterOrEqualToZero,
+                previousElementsGreaterThanZero,
                 previousElements,
-                count: parsedData.count,
+                value: parsedData.value,
               });
 
-              setElements(new Set([...previousElementsGreaterOrEqualToZero]));
+              setElements(new Set([...previousElementsGreaterThanZero]));
 
               return;
             }
 
             const highestNumber = Math.max(...elements);
 
-            if (parsedData.count > highestNumber) {
-              const difference = parsedData.count - highestNumber;
+            if (parsedData.value > highestNumber) {
+              const difference = parsedData.value - highestNumber;
 
               const additionalElements: number[] = [];
 
@@ -123,10 +122,25 @@ function App() {
             break;
           }
           case 'failed': {
-            // TODO: update UI to show error
-            setElements(new Set([0]));
+            // add the failed number to the end of the list
+            // fade it red
+            console.log('failed', parsedData.value);
+            console.log({ parsedData });
+            setFailedNumber(parsedData.value);
 
-            // todo: aniamte failure
+            // animate(
+            //   '.number-element',
+            //   { opacity: 0, y: 500 },
+            //   {
+            //     ease: 'anticipate',
+            //     duration: 1,
+            //     onComplete: () => {
+            //       // todo: aniamte failure
+            //     },
+            //   }
+            // );
+
+            // TODO: update UI to show error
 
             console.log('Failed to update count');
           }
@@ -164,7 +178,7 @@ function App() {
     }
 
     websocket.send(
-      JSON.stringify({ type: 'update-count', count: inputNumberValue })
+      JSON.stringify({ type: 'update-count', value: inputNumberValue })
     );
 
     setInputValue('');
@@ -184,8 +198,27 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (failedNumber === null) return;
+
+    setTimeout(() => {
+      animate(
+        '.number-element',
+        { opacity: 0, y: 500 },
+        {
+          ease: 'backInOut',
+          duration: 0.75,
+          onComplete: () => {
+            setFailedNumber(null);
+            setElements(new Set([]));
+          },
+        }
+      );
+    }, 300);
+  }, [animate, failedNumber]);
+
   return (
-    <div>
+    <div ref={scope}>
       {/* <p>Current count: {count}</p> */}
       <div className='fixed top-6 left-6 text-lg text-gray-50 flex gap-8 items-center'>
         <p>High score: 99</p>
@@ -200,6 +233,7 @@ function App() {
           siteKey='0x4AAAAAAALvq89KRwrAjqSU'
           onSuccess={() => console.log('success')}
         /> */}
+
         <div className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'>
           {[...elementsSorted].map((number) => (
             <NumberElement
@@ -208,6 +242,9 @@ function App() {
               isHighestNumber={highestNumber === number}
             />
           ))}
+          {typeof failedNumber === 'number' && (
+            <FailedNumberElement number={failedNumber} />
+          )}
         </div>
         <div className='fixed border border-gray-600 justify-between bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-6 py-3 rounded-xl'>
           <input

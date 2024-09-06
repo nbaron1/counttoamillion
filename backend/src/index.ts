@@ -78,29 +78,35 @@ export class WebSocketServer extends DurableObject {
 
 				switch (parsedData.type) {
 					case 'initial': {
-						const count = await this.getCounterValue();
-						server.send(JSON.stringify({ count, type: 'count-updated' }));
+						const value = await this.getCounterValue();
+						server.send(JSON.stringify({ value, type: 'count-updated' }));
 
 						return;
 					}
 					case 'update-count': {
 						const currentCount = await this.getCounterValue();
 
-						if (currentCount + 1 !== parsedData.count) {
-							await this.setCounterValue(0);
+						if (currentCount + 1 !== parsedData.value) {
+							await this.setCounterValue(1);
 
-							server.send(JSON.stringify({ type: 'failed' }));
+							this.connections.forEach((connection) => {
+								try {
+									connection.send(JSON.stringify({ type: 'failed', value: parsedData.value }));
+								} catch (error) {
+									console.error('Error sending message to client', error);
+								}
+							});
 
 							return;
 						}
 
-						await this.setCounterValue(parsedData.count);
+						await this.setCounterValue(parsedData.value);
 
 						const updatedCount = await this.getCounterValue();
 
 						this.connections.forEach((connection) => {
 							try {
-								connection.send(JSON.stringify({ count: updatedCount, type: 'count-updated' }));
+								connection.send(JSON.stringify({ value: updatedCount, type: 'count-updated' }));
 							} catch (error) {
 								console.error('Error sending message to client', error);
 							}
