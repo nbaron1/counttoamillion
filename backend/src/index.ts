@@ -22,6 +22,8 @@ export interface Env {
 	//
 	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
 	WEBSOCKET_SERVER: DurableObjectNamespace<WebSocketServer>;
+
+	DB: D1Database;
 	//
 	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
 	// MY_BUCKET: R2Bucket;
@@ -34,7 +36,7 @@ export interface Env {
 }
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
-export class WebSocketServer extends DurableObject {
+export class WebSocketServer extends DurableObject<Env> {
 	// private sessions: Map<string, WebSocket>;
 	private connections: WebSocket[] = [];
 
@@ -70,6 +72,9 @@ export class WebSocketServer extends DurableObject {
 	}
 
 	async fetch(request: Request): Promise<Response> {
+		// const result = await query.first();
+		// console.log({ result });
+
 		// Creates two ends of a WebSocket connection.
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
@@ -104,6 +109,9 @@ export class WebSocketServer extends DurableObject {
 
 						if (currentCount + 1 !== parsedData.value) {
 							await this.setCounterValue(1);
+
+							const query = this.env.DB.prepare('INSERT INTO attempt (max_count) VALUES (?)').bind(currentCount);
+							await query.run();
 
 							this.connections.forEach((connection) => {
 								try {
@@ -168,33 +176,39 @@ export default {
 	 * @returns The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx): Promise<Response> {
-		if (request.url.endsWith('/websocket')) {
-			const upgradeHeader = request.headers.get('Upgrade');
+		console.log(new URL(request.url).pathname);
 
-			if (!upgradeHeader || upgradeHeader !== 'websocket') {
-				return new Response('Durable Object expected Upgrade: websocket', { status: 426 });
+		const pathName = new URL(request.url).pathname;
+
+		console.log('Pathname', pathName);
+
+		switch (pathName) {
+			case '/v1/websocket': {
+				const upgradeHeader = request.headers.get('Upgrade');
+
+				if (!upgradeHeader || upgradeHeader !== 'websocket') {
+					return new Response('Durable Object expected Upgrade: websocket', { status: 426 });
+				}
+
+				let id = env.WEBSOCKET_SERVER.idFromName('main');
+				let stub = env.WEBSOCKET_SERVER.get(id);
+
+				return stub.fetch(request);
 			}
+			case '/v1/attempt': {
+				if (request.method !== 'GET') {
+					return new Response('Method not allowed', { status: 405 });
+				}
 
-			let id = env.WEBSOCKET_SERVER.idFromName('main');
-			let stub = env.WEBSOCKET_SERVER.get(id);
+				// todo: add pagination
+				const query = env.DB.prepare('SELECT * FROM attempt limit 10');
+				const attempts = await query.all();
 
-			return stub.fetch(request);
-
-			// We will create a `DurableObjectId` using the pathname from the Worker request
-			// This id refers to a unique instance of our 'MyDurableObject' class above
-			// let id: DurableObjectId = env.WEBSOCKET_SERVER.idFromName(new URL(request.url).pathname);
-
-			// // This stub creates a communication channel with the Durable Object instance
-			// // The Durable Object constructor will be invoked upon the first call for a given id
-			// let stub = env.WEBSOCKET_SERVER.get(id);
-
-			// // We call the `sayHello()` RPC method on the stub to invoke the method on the remote
-			// // Durable Object instance
-			// let greeting = await stub.sayHello('world');
-
-			// return new Response(greeting);
+				return new Response(JSON.stringify(attempts), { status: 200 });
+			}
+			default: {
+				return new Response('Not Found', { status: 404 });
+			}
 		}
-
-		return new Response('Not Found', { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;

@@ -132,7 +132,7 @@ function App() {
         console.error(error);
       }
     },
-    [animate, elements]
+    [animate, elements, highscore]
   );
 
   const handleError = useCallback((error: Event) => {
@@ -161,7 +161,7 @@ function App() {
     }
 
     if (!websocketRef.current) {
-      const host = `${websocketHost}/websocket`;
+      const host = `${websocketHost}/v1/websocket`;
       websocketRef.current = new WebSocket(host);
     }
 
@@ -232,7 +232,7 @@ function App() {
       {/* <p>Current count: {count}</p> */}
       <div className='fixed top-6 left-6 text-lg text-gray-50 flex gap-8 items-center'>
         <p>High score: {highscore}</p>
-        <p className='underline text-lg'>Replay</p>
+        <p className='underline text-lg'>Previous attempts</p>
       </div>
       <div className='flex items-center gap-5'>
         {/* <Turnstile
