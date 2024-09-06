@@ -178,7 +178,7 @@ function App() {
           siteKey='0x4AAAAAAALvq89KRwrAjqSU'
           onSuccess={() => console.log('success')}
         /> */}
-        <div className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'>
+        <div className='fixed top-1/2 -translate-y-1/2 -translate-x-1/2 right-1/2 gap-8 text-[64px] flex'>
           {[...elementsSorted].map((number) => (
             <NumberElement
               key={number}
