@@ -450,9 +450,15 @@ function App() {
   return (
     <div ref={scope}>
       {/* <p>Current count: {count}</p> */}
-      <div className='fixed sm:right-6 sm:flex-row sm:justify-between top-6 flex-col left-6 text-lg text-gray-50 flex'>
-        <p>High score: {highscore}</p>
-        <PreviousAttemptsDialog />
+      <div className='fixed sm:right-6 top-6 sm:justify-between left-6 text-lg text-gray-50 flex'>
+        <div className='flex flex-col sm:flex-row sm:gap-4'>
+          <p>High score: {highscore}</p>
+          <PreviousAttemptsDialog />
+        </div>
+        <div className='hidden sm:flex items-center gap-3'>
+          <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
+          <p className='text-gray-50'>100 users online</p>
+        </div>
       </div>
       <div className='flex items-center gap-5'>
         {/* <Turnstile
@@ -480,36 +486,42 @@ function App() {
             <FailedNumberElement number={failedNumber} />
           )}
         </div>
-        <div className='fixed border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-4 py-3 rounded-xl'>
-          <input
-            placeholder='Write the next number'
-            autoFocus
-            ref={inputRef}
-            value={inputValue}
-            onKeyDown={handleKeyDown}
-            className='flex-1 pl-2 text-white bg-transparent outline-none text-xl min-w-0'
-            onChange={(event) => setInputValue(event.target.value)}
-          />
-          <button
-            type='button'
-            className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
-            onClick={handleSubmit}
-          >
-            <svg
-              width='24'
-              height='24'
-              viewBox='0 0 24 24'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'
+        <div className='fixed bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-3'>
+          <div className='sm:hidden flex items-center gap-2'>
+            <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
+            <p className='text-gray-50'>100 users online</p>
+          </div>
+          <div className=' border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-3 rounded-xl'>
+            <input
+              placeholder='Write the next number'
+              autoFocus
+              ref={inputRef}
+              value={inputValue}
+              onKeyDown={handleKeyDown}
+              className='flex-1 pl-2 text-white bg-transparent outline-none text-xl min-w-0'
+              onChange={(event) => setInputValue(event.target.value)}
+            />
+            <button
+              type='button'
+              className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
+              onClick={handleSubmit}
             >
-              <path
-                fillRule='evenodd'
-                clipRule='evenodd'
-                d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
-                fill='#FAFAF9'
-              />
-            </svg>
-          </button>
+              <svg
+                width='24'
+                height='24'
+                viewBox='0 0 24 24'
+                fill='none'
+                xmlns='http://www.w3.org/2000/svg'
+              >
+                <path
+                  fillRule='evenodd'
+                  clipRule='evenodd'
+                  d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
+                  fill='#FAFAF9'
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
