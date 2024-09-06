@@ -109,11 +109,40 @@ const useAttempts = ({
 
 type Attempt = { max_count: number; id: number; created_at: string };
 
+function getTimeSince(utcTimestamp: string): string {
+  // Parse the UTC timestamp
+  const pastDate = new Date(utcTimestamp);
+  const now = new Date();
+  const nowInUTC = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+
+  // Calculate the difference in milliseconds
+  const diffMs = nowInUTC.getTime() - pastDate.getTime();
+
+  // Convert milliseconds to different units
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  // Return a human-readable string
+  if (diffDays > 0) {
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  } else if (diffHours > 0) {
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  } else if (diffMinutes > 0) {
+    return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+  } else {
+    return `${diffSeconds} second${diffSeconds > 1 ? 's' : ''} ago`;
+  }
+}
+
 function PreviousAttempt({ attempt }: { attempt: Attempt }) {
+  const timeSince = getTimeSince(attempt.created_at);
+
   return (
     <div className='flex flex-col'>
       <p className='text-gray-50 text-lg sm:text-xl'>{attempt.max_count}</p>
-      <p className='text-gray-400 text-lg'>{attempt.created_at}</p>
+      <p className='text-gray-400 text-lg'>{timeSince}</p>
     </div>
   );
 }
