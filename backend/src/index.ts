@@ -195,7 +195,13 @@ export default {
 
 				return stub.fetch(request);
 			}
-			case '/v1/attempt': {
+			case '/v1/attempts': {
+				console.log({ method: request.method });
+
+				const responseHeaders = new Headers();
+				// tood: change allowed based on dev / prod mode
+				responseHeaders.set('Access-Control-Allow-Origin', '*');
+
 				if (request.method !== 'GET') {
 					return new Response('Method not allowed', { status: 405 });
 				}
@@ -204,7 +210,11 @@ export default {
 				const query = env.DB.prepare('SELECT * FROM attempt limit 10');
 				const attempts = await query.all();
 
-				return new Response(JSON.stringify(attempts), { status: 200 });
+				if (!attempts.success) {
+					return new Response('Failed to get attempts', { status: 500, headers: responseHeaders });
+				}
+
+				return new Response(JSON.stringify(attempts.results), { status: 200, headers: responseHeaders });
 			}
 			default: {
 				return new Response('Not Found', { status: 404 });
