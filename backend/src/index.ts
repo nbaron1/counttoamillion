@@ -166,6 +166,8 @@ export class WebSocketServer extends DurableObject<Env> {
 	}
 }
 
+const PAGE_SIZE = 50;
+
 export default {
 	/**
 	 * This is the standard fetch handler for a Cloudflare Worker
@@ -206,22 +208,44 @@ export default {
 
 				const filter = new URL(request.url).searchParams.get('filter') ?? 'latest';
 
+				const page = Number(new URL(request.url).searchParams.get('page')) ?? 1;
+
 				if (filter !== 'latest' && filter !== 'top') {
 					return new Response('Invalid filter', { status: 400, headers: responseHeaders });
 				}
 
 				const query =
 					filter === 'latest'
-						? env.DB.prepare('SELECT * FROM attempt ORDER BY created_at DESC LIMIT 10')
-						: env.DB.prepare('SELECT * FROM attempt ORDER BY max_count DESC, created_at DESC LIMIT 10');
+						? env.DB.prepare('SELECT * FROM attempt ORDER BY created_at DESC LIMIT ?1 OFFSET ?2').bind(PAGE_SIZE, (page - 1) * PAGE_SIZE)
+						: env.DB.prepare('SELECT * FROM attempt ORDER BY max_count DESC, created_at DESC LIMIT ?1 OFFSET ?2').bind(
+								PAGE_SIZE,
+								(page - 1) * PAGE_SIZE
+						  );
 
 				const attempts = await query.all();
 
 				if (!attempts.success) {
-					return new Response('Failed to get attempts', { status: 500, headers: responseHeaders });
+					return new Response('Internal server error', { status: 500, headers: responseHeaders });
 				}
 
-				return new Response(JSON.stringify(attempts.results), { status: 200, headers: responseHeaders });
+				const numberOfRowsResult = await env.DB.prepare('SELECT COUNT(*) FROM attempt').first();
+
+				if (!numberOfRowsResult) {
+					return new Response('Internal server error', { status: 500, headers: responseHeaders });
+				}
+
+				const numberOfRows = numberOfRowsResult['COUNT(*)'];
+
+				if (typeof numberOfRows !== 'number') {
+					return new Response('Internal server error', { status: 500, headers: responseHeaders });
+				}
+
+				const hasNextPage = numberOfRows > page * PAGE_SIZE;
+
+				return new Response(JSON.stringify({ data: attempts.results, success: true, hasNextPage }), {
+					status: 200,
+					headers: responseHeaders,
+				});
 			}
 			default: {
 				return new Response('Not Found', { status: 404 });

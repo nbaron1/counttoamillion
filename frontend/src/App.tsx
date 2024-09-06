@@ -68,17 +68,30 @@ if (!BACKEND_HOST) {
   throw new Error('VITE_BACKEND_HOST not found');
 }
 
-const useAttempts = (filter: AttemptFilter) => {
-  const [attempts, setAttempts] = useState([]);
+const useAttempts = ({
+  filter,
+  page,
+}: {
+  filter: AttemptFilter;
+  page: number;
+}) => {
+  const [data, setData] = useState<
+    { id: number; created_at: string; max_count: number }[]
+  >([]);
+  const [hasNextPage, setHasNextPage] = useState(false);
 
   useEffect(() => {
     const fetchAttempts = async () => {
       try {
         const response = await fetch(
-          `${BACKEND_HOST}/v1/attempts?filter=${filter}`
+          `${BACKEND_HOST}/v1/attempts?filter=${filter}&page=${page}`
         );
-        const data = await response.json();
-        setAttempts(data);
+        const { data, hasNextPage } = await response.json();
+
+        console.log({ hasNextPage });
+
+        setData(data);
+        setHasNextPage(hasNextPage);
       } catch (error) {
         // todo: auto retry after 1 second
         console.error('Error fetching attempts', error);
@@ -86,15 +99,14 @@ const useAttempts = (filter: AttemptFilter) => {
     };
 
     fetchAttempts();
-  }, [filter]);
+  }, [filter, page]);
 
-  return attempts;
+  return { data, hasNextPage };
 };
 
 type Attempt = { max_count: number; id: number; created_at: string };
 
 function PreviousAttempt({ attempt }: { attempt: Attempt }) {
-  console.log(attempt);
   return (
     <div className='flex flex-col'>
       <p className='text-gray-50'>{attempt.max_count}</p>
@@ -103,25 +115,62 @@ function PreviousAttempt({ attempt }: { attempt: Attempt }) {
   );
 }
 
-function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
-  const attempts = useAttempts(type);
+function PreviousAttemptDialogPage({
+  filter,
+  page,
+  isLastPage,
+  onLoadMore,
+}: {
+  filter: AttemptFilter;
+  page: number;
+  isLastPage: boolean;
+  onLoadMore: () => void;
+}) {
+  const { data, hasNextPage } = useAttempts({ page, filter });
+
+  console.log({ hasNextPage });
 
   return (
-    <div className='flex flex-col gap-6'>
-      {attempts.map((attempt) => (
-        <PreviousAttempt attempt={attempt} />
+    <div className='flex flex-col gap-6 max-h-72 overflow-y-scroll'>
+      {data.map((attempt) => (
+        <PreviousAttempt attempt={attempt} key={attempt.id} />
       ))}
+      {isLastPage && hasNextPage && (
+        <button
+          className='bg-gray-800 py-2 text-gray-50 border border-gray-700 rounded'
+          type='button'
+          onClick={onLoadMore}
+        >
+          Load more
+        </button>
+      )}
     </div>
+  );
+}
+
+function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
+  const [pages, setPages] = useState(1);
+
+  return (
+    <>
+      <div className='flex flex-col'>
+        {Array.from({ length: pages }).map((_, i) => (
+          <PreviousAttemptDialogPage
+            key={i}
+            filter={type}
+            page={i + 1}
+            onLoadMore={() => setPages(pages + 1)}
+            isLastPage={i + 1 === pages}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
 type AttemptFilter = 'latest' | 'top';
 
 function PreviousAttemptsDialog() {
-  const latestAttempts = useAttempts('latest');
-
-  console.log({ latestAttempts });
-
   const [type, setType] = useState<AttemptFilter>('latest');
 
   const handleValueChange = (value: string) => {
@@ -168,7 +217,6 @@ function PreviousAttemptsDialog() {
               </RadioGroup.Item>
             </RadioGroup.Root>
           </div>
-
           <PreviousAttemptDialogContent type={type} />
         </Dialog.Content>
       </Dialog.Portal>
