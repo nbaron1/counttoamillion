@@ -128,10 +128,8 @@ function PreviousAttemptDialogPage({
 }) {
   const { data, hasNextPage } = useAttempts({ page, filter });
 
-  console.log({ hasNextPage });
-
   return (
-    <div className='flex flex-col gap-6 max-h-72 overflow-y-scroll'>
+    <div className='flex flex-col gap-6'>
       {data.map((attempt) => (
         <PreviousAttempt attempt={attempt} key={attempt.id} />
       ))}
@@ -153,7 +151,7 @@ function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
 
   return (
     <>
-      <div className='flex flex-col'>
+      <div className='flex flex-col max-h-72 overflow-y-scroll gap-6'>
         {Array.from({ length: pages }).map((_, i) => (
           <PreviousAttemptDialogPage
             key={i}
@@ -217,7 +215,12 @@ function PreviousAttemptsDialog() {
               </RadioGroup.Item>
             </RadioGroup.Root>
           </div>
-          <PreviousAttemptDialogContent type={type} />
+          <div style={{ display: type === 'latest' ? 'block' : 'none' }}>
+            <PreviousAttemptDialogContent type='latest' />
+          </div>
+          <div style={{ display: type === 'top' ? 'block' : 'none' }}>
+            <PreviousAttemptDialogContent type='top' />
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
