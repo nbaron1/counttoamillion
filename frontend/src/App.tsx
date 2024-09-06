@@ -1,4 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+function NumberElement({
+  number,
+  isHighestNumber,
+}: {
+  number: number;
+  isHighestNumber: boolean;
+}) {
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (hasAnimated.current) {
+      return;
+    }
+
+    console.log(`Animating ${number}`);
+    hasAnimated.current = true;
+  }, [number]);
+
+  const className = isHighestNumber
+    ? 'text-gray-50  w-16'
+    : 'text-gray-500 w-16';
+
+  return (
+    <p className={className} key={number}>
+      {number}
+    </p>
+  );
+}
 
 function App() {
   const [count, setCount] = useState(0);
@@ -7,6 +36,8 @@ function App() {
   const websocketRef = useRef<WebSocket | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const [elements, setElements] = useState<Set<number>>(new Set([]));
+
   useEffect(() => {
     const websocketHost = import.meta.env.VITE_BACKEND_HOST;
 
@@ -14,9 +45,7 @@ function App() {
       throw new Error('VITE_BACKEND_HOST not found');
     }
 
-    console.log('Websocket host', { websocketHost });
     const host = `${websocketHost}/websocket`;
-    console.log({ host });
     const socket = new WebSocket(host);
 
     // Connection opened
@@ -43,12 +72,49 @@ function App() {
 
         switch (parsedData.type) {
           case 'count-updated': {
+            if (elements.size === 0) {
+              const previousElements = Array.from(
+                { length: 10 },
+                (_, i) => count - i
+              );
+
+              const previousElementsGreaterOrEqualToZero =
+                previousElements.filter((value) => value >= 0);
+
+              setElements(new Set([...previousElementsGreaterOrEqualToZero]));
+
+              return;
+            }
+
+            const highestNumber = Math.max(...elements);
+
+            if (parsedData.count > highestNumber) {
+              const difference = parsedData.count - highestNumber;
+
+              const additionalElements: number[] = [];
+
+              Array.from({
+                length: difference,
+              }).map((_, i) => {
+                additionalElements.push(highestNumber + i + 1);
+              });
+
+              setElements(
+                (prevElements) =>
+                  new Set([...prevElements, ...additionalElements])
+              );
+            }
+
             setCount(parsedData.count);
 
             break;
           }
           case 'failed': {
             // TODO: update UI to show error
+            setElements(new Set([0]));
+
+            // todo: aniamte failure
+
             console.log('Failed to update count');
           }
         }
@@ -58,7 +124,7 @@ function App() {
     });
 
     websocketRef.current = socket;
-  }, []);
+  }, [count, elements]);
 
   const handleSubmit = async () => {
     const websocket = websocketRef.current;
@@ -70,6 +136,7 @@ function App() {
     const inputNumberValue = Number.parseInt(inputValue, 10);
     console.log({ inputNumberValue });
 
+    // TODO: Error handling
     if (Number.isNaN(inputNumberValue)) {
       console.error('Input is not a number', { input: inputValue });
       return;
@@ -91,6 +158,10 @@ function App() {
     inputRef.current?.focus();
   };
 
+  const highestNumber = useMemo(() => Math.max(...elements), [elements]);
+
+  const elementsSorted = Array.from(elements).sort((a, b) => a - b);
+
   return (
     <div>
       {/* <p>Current count: {count}</p> */}
@@ -108,15 +179,13 @@ function App() {
           onSuccess={() => console.log('success')}
         /> */}
         <div className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'>
-          <p className='text-gray-500 w-16'>{count - 8}</p>
-          <p className='text-gray-500 w-16'>{count - 7}</p>
-          <p className='text-gray-500 w-16'>{count - 6}</p>
-          <p className='text-gray-500 w-16'>{count - 5}</p>
-          <p className='text-gray-500 w-16'>{count - 4}</p>
-          <p className='text-gray-500 w-16'>{count - 3}</p>
-          <p className='text-gray-500 w-16'>{count - 2}</p>
-          <p className='text-gray-500 w-16'>{count - 1}</p>
-          <p className='text-white'>{count}</p>
+          {[...elementsSorted].map((number) => (
+            <NumberElement
+              key={number}
+              number={number}
+              isHighestNumber={highestNumber === number}
+            />
+          ))}
         </div>
         <div className='fixed border border-gray-600 justify-between bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-6 py-3 rounded-xl'>
           <input
