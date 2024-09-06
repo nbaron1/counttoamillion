@@ -15,7 +15,7 @@ function App() {
 
     console.log('Websocket host', { websocketHost });
 
-    const socket = new WebSocket(`ws://${websocketHost}/websocket`);
+    const socket = new WebSocket(`${websocketHost}/websocket`);
 
     // Connection opened
     socket.addEventListener('open', (event) => {
