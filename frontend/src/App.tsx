@@ -232,7 +232,7 @@ function PreviousAttemptsDialog() {
 
   return (
     <Dialog.Root>
-      <Dialog.Trigger className='underline text-lg'>
+      <Dialog.Trigger className='text-lg text-gray-400'>
         Previous attempts
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -256,13 +256,13 @@ function PreviousAttemptsDialog() {
                 className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded'
                 value='latest'
               >
-                Previous
+                Latest
               </RadioGroup.Item>
               <RadioGroup.Item
                 className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded py-1'
                 value='top'
               >
-                Best
+                Highest
               </RadioGroup.Item>
             </RadioGroup.Root>
           </div>
@@ -292,6 +292,7 @@ function App() {
   const [scope, animate] = useAnimate();
   const [failedNumber, setFailedNumber] = useState<null | number>(null);
   const [highscore, setHighscore] = useState<null | number>(null);
+  const [userCount, setUserCount] = useState<null | number>(null);
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
@@ -310,7 +311,7 @@ function App() {
             );
 
             setElements(new Set([...previousElementsGreaterThanZero]));
-
+            setUserCount(parsedData.userCount);
             setHighscore(parsedData.highScore);
 
             console.log('is here!!');
@@ -369,6 +370,13 @@ function App() {
             }, 300);
 
             console.log('Failed to update count');
+            break;
+          }
+          case 'user-count': {
+            console.log({ userCount: parsedData.value });
+            setUserCount(parsedData.value);
+
+            break;
           }
         }
       } catch (error) {
@@ -490,7 +498,9 @@ function App() {
         </div>
         <div className='hidden sm:flex items-center gap-3'>
           <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
-          <p className='text-gray-50'>100 users online</p>
+          <p className='text-gray-50'>
+            {userCount} <span className='text-gray-400'>users online</span>
+          </p>
         </div>
       </div>
       <div className='flex items-center gap-5'>
@@ -524,14 +534,14 @@ function App() {
             <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
             <p className='text-gray-50'>100 users online</p>
           </div>
-          <div className=' border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-3 rounded-xl'>
+          <div className='border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
             <input
               placeholder='Write the next number'
               autoFocus
               ref={inputRef}
               value={inputValue}
               onKeyDown={handleKeyDown}
-              className='flex-1 pl-2 text-white bg-transparent outline-none text-xl min-w-0'
+              className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
               onChange={(event) => setInputValue(event.target.value)}
             />
             <button

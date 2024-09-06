@@ -82,6 +82,14 @@ export class WebSocketServer extends DurableObject<Env> {
 		this.connections.push(server);
 		server.accept();
 
+		this.connections.forEach((connection) => {
+			try {
+				connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
+			} catch (error) {
+				console.error('Error sending message to client', error);
+			}
+		});
+
 		// Upon receiving a message from the client, the server replies with the same message,
 		// and the total number of connections with the "[Durable Object]: " prefix
 		server.addEventListener('message', async (event) => {
@@ -95,9 +103,10 @@ export class WebSocketServer extends DurableObject<Env> {
 					case 'initial': {
 						const value = await this.getCounterValue();
 						const highScore = await this.getHighScore();
+						const userCount = this.connections.length;
 
 						try {
-							server.send(JSON.stringify({ value, type: 'initial', highScore }));
+							server.send(JSON.stringify({ value, type: 'initial', highScore, userCount }));
 						} catch (error) {
 							console.error('Error sending message to client', error);
 						}
@@ -152,11 +161,27 @@ export class WebSocketServer extends DurableObject<Env> {
 		server.addEventListener('close', (cls) => {
 			this.connections = this.connections.filter((connection) => connection !== server);
 			server.close(cls.code, 'Durable Object is closing WebSocket');
+
+			this.connections.forEach((connection) => {
+				try {
+					connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
+				} catch (error) {
+					console.error('Error sending message to client', error);
+				}
+			});
 		});
 
 		server.addEventListener('error', (error) => {
 			this.connections = this.connections.filter((connection) => connection !== server);
 			console.error('WebSocket error', error);
+
+			this.connections.forEach((connection) => {
+				try {
+					connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
+				} catch (error) {
+					console.error('Error sending message to client', error);
+				}
+			});
 		});
 
 		return new Response(null, {
