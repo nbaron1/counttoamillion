@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useAnimate } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as RadioGroup from '@radix-ui/react-radio-group';
+import './dialog.css';
 
 function NumberElement({
   number,
@@ -185,8 +186,8 @@ function PreviousAttemptsDialog() {
         Previous attempts
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='flex gap-8 flex-col px-5 py-6 rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+        <Dialog.Overlay className='DialogOverlay fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
+        <Dialog.Content className='DialogContent flex gap-8 flex-col px-5 py-6 rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <Dialog.Title className='text-gray-50 text-2xl'>
