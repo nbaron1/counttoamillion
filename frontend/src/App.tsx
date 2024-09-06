@@ -7,7 +7,9 @@ function App() {
   const websocketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const socket = new WebSocket('ws://localhost:8787/websocket');
+    const websocketHost = import.meta.env.VITE_BACKEND_HOST as string;
+
+    const socket = new WebSocket(`ws://${websocketHost}/websocket`);
 
     // Connection opened
     socket.addEventListener('open', (event) => {
