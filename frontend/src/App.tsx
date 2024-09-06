@@ -31,8 +31,8 @@ function NumberElement({
 
   return (
     <motion.p
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: -35 }}
+      animate={{ opacity: 1, y: 0 }}
       className={className}
     >
       {number}
