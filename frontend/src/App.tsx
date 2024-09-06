@@ -6,52 +6,53 @@ function App() {
 
   const websocketRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    const websocketHost = import.meta.env.VITE_BACKEND_HOST as string;
+  // useEffect(() => {
+  //   console.log('In app');
 
-    const socket = new WebSocket(`ws://${websocketHost}/websocket`);
+  //   const websocketHost = import.meta.env.VITE_BACKEND_HOST as string;
+  //   console.log('Websocket host', { websocketHost });
 
-    // Connection opened
-    socket.addEventListener('open', (event) => {
-      console.log('Connected to server', event);
+  //   const socket = new WebSocket(`ws://${websocketHost}/websocket`);
 
-      socket.send(JSON.stringify({ type: 'initial' }));
-    });
+  //   // Connection opened
+  //   socket.addEventListener('open', (event) => {
+  //     console.log('Connected to server', event);
 
-    socket.addEventListener('error', (error) => {
-      console.log('Error connecting to server', error);
-    });
+  //     socket.send(JSON.stringify({ type: 'initial' }));
+  //   });
 
-    socket.addEventListener('close', (event) => {
-      // TODO: handle reconnection
-      console.log('Connection closed', event);
-    });
+  //   socket.addEventListener('error', (error) => {
+  //     console.log('Error connecting to server', error);
+  //   });
 
-    // Listen for messages
-    socket.addEventListener('message', (event) => {
-      console.log('Message from server ', event.data);
-      try {
-        const parsedData = JSON.parse(event.data as string);
+  //   socket.addEventListener('close', (event) => {
+  //     // TODO: handle reconnection
+  //     console.log('Connection closed', event);
+  //   });
 
-        if ('count' in parsedData) {
-          setCount(parsedData.count);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    });
+  //   // Listen for messages
+  //   socket.addEventListener('message', (event) => {
+  //     console.log('Message from server ', event.data);
+  //     try {
+  //       const parsedData = JSON.parse(event.data as string);
 
-    websocketRef.current = socket;
-  }, []);
+  //       if ('count' in parsedData) {
+  //         setCount(parsedData.count);
+  //       }
+  //     } catch (error) {
+  //       console.error(error);
+  //     }
+  //   });
+
+  //   websocketRef.current = socket;
+  // }, []);
 
   const handleSubmit = async () => {
-    const websocket = websocketRef.current;
-
-    if (!websocket) {
-      return;
-    }
-
-    websocket.send(JSON.stringify({ count: newCount }));
+    // const websocket = websocketRef.current;
+    // if (!websocket) {
+    //   return;
+    // }
+    // websocket.send(JSON.stringify({ count: newCount }));
   };
 
   return (
