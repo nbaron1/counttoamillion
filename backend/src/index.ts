@@ -43,6 +43,16 @@ export class WebSocketServer extends DurableObject {
 		return value;
 	}
 
+	async getHighScore() {
+		const highScore: number = (await this.ctx.storage.get('highScore')) || 0;
+		return highScore;
+	}
+
+	async setHighScore(value: number) {
+		console.log('Setting high score to', value);
+		await this.ctx.storage.put('highScore', value);
+	}
+
 	async setCounterValue(value: number) {
 		console.log('Setting value to', value);
 		await this.ctx.storage.put('value', value);
@@ -79,7 +89,13 @@ export class WebSocketServer extends DurableObject {
 				switch (parsedData.type) {
 					case 'initial': {
 						const value = await this.getCounterValue();
-						server.send(JSON.stringify({ value, type: 'count-updated' }));
+						const highScore = await this.getHighScore();
+
+						try {
+							server.send(JSON.stringify({ value, type: 'initial', highScore }));
+						} catch (error) {
+							console.error('Error sending message to client', error);
+						}
 
 						return;
 					}
@@ -102,15 +118,19 @@ export class WebSocketServer extends DurableObject {
 
 						await this.setCounterValue(parsedData.value);
 
-						const updatedCount = await this.getCounterValue();
-
 						this.connections.forEach((connection) => {
 							try {
-								connection.send(JSON.stringify({ value: updatedCount, type: 'count-updated' }));
+								connection.send(JSON.stringify({ value: parsedData.value, type: 'count-updated' }));
 							} catch (error) {
 								console.error('Error sending message to client', error);
 							}
 						});
+
+						const highScore = await this.getHighScore();
+
+						if (parsedData.value > highScore) {
+							await this.setHighScore(parsedData.value);
+						}
 
 						return;
 					}

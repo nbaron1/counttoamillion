@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useAnimate } from 'framer-motion';
 
 function NumberElement({
@@ -43,60 +43,40 @@ function App() {
 
   const [elements, setElements] = useState<Set<number>>(new Set([]));
 
+  // TODO: remove this
+  const [key, rerender] = useState(Math.random());
+
   const [scope, animate] = useAnimate();
   const [failedNumber, setFailedNumber] = useState<null | number>(null);
+  const [highscore, setHighscore] = useState<null | number>(null);
 
-  useEffect(() => {
-    const websocketHost = import.meta.env.VITE_BACKEND_HOST;
-
-    if (!websocketHost) {
-      throw new Error('VITE_BACKEND_HOST not found');
-    }
-
-    const host = `${websocketHost}/websocket`;
-    const socket = new WebSocket(host);
-
-    // Connection opened
-    socket.addEventListener('open', (event) => {
-      console.log('Connected to server', event);
-
-      socket.send(JSON.stringify({ type: 'initial' }));
-    });
-
-    socket.addEventListener('error', (error) => {
-      console.log('Error connecting to server', error);
-    });
-
-    socket.addEventListener('close', (event) => {
-      // TODO: handle reconnection
-      console.log('Connection closed', event);
-    });
-
-    // Listen for messages
-    socket.addEventListener('message', (event) => {
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
       console.log('Message from server ', event.data);
       try {
         const parsedData = JSON.parse(event.data as string);
 
         switch (parsedData.type) {
+          case 'initial': {
+            const previousElements = Array.from({ length: 10 }).map(
+              (_, i) => parsedData.value - i
+            );
+
+            const previousElementsGreaterThanZero = previousElements.filter(
+              (value) => value > 0
+            );
+
+            setElements(new Set([...previousElementsGreaterThanZero]));
+
+            setHighscore(parsedData.highScore);
+
+            console.log('is here!!');
+
+            break;
+          }
           case 'count-updated': {
             if (elements.size === 0) {
-              const previousElements = Array.from({ length: 10 }).map(
-                (_, i) => parsedData.value - i
-              );
-
-              const previousElementsGreaterThanZero = previousElements.filter(
-                (value) => value > 0
-              );
-
-              console.log({
-                previousElementsGreaterThanZero,
-                previousElements,
-                value: parsedData.value,
-              });
-
-              setElements(new Set([...previousElementsGreaterThanZero]));
-
+              console.log(elements.size);
               return;
             }
 
@@ -148,10 +128,54 @@ function App() {
       } catch (error) {
         console.error(error);
       }
-    });
+    },
+    [elements]
+  );
 
-    websocketRef.current = socket;
-  }, [elements]);
+  const handleError = useCallback((error: Event) => {
+    console.log('Error connecting to server', error);
+  }, []);
+
+  const handleClose = useCallback((event: CloseEvent) => {
+    // TODO: handle reconnection
+    console.log('Connection closed', event);
+  }, []);
+
+  const handleOpen = useCallback((event: Event) => {
+    if (!websocketRef.current) return;
+
+    console.log('Connected to server', event);
+    console.log('Sending initial message...');
+
+    websocketRef.current.send(JSON.stringify({ type: 'initial' }));
+  }, []);
+
+  useEffect(() => {
+    const websocketHost = import.meta.env.VITE_BACKEND_HOST;
+
+    if (!websocketHost) {
+      throw new Error('VITE_BACKEND_HOST not found');
+    }
+
+    if (!websocketRef.current) {
+      const host = `${websocketHost}/websocket`;
+      websocketRef.current = new WebSocket(host);
+    }
+
+    const websocket = websocketRef.current;
+
+    websocket.addEventListener('open', handleOpen);
+    websocket.addEventListener('close', handleClose);
+    websocket.addEventListener('message', handleMessage);
+    websocket.addEventListener('error', handleError);
+
+    return () => {
+      websocket.removeEventListener('open', handleOpen);
+      websocket.removeEventListener('message', handleMessage);
+      websocket.removeEventListener('error', handleError);
+      websocket.removeEventListener('close', handleClose);
+    };
+  }, [elements, handleClose, handleError, handleMessage, handleOpen]);
 
   const handleSubmit = async () => {
     const websocket = websocketRef.current;
@@ -210,18 +234,22 @@ function App() {
           duration: 0.75,
           onComplete: () => {
             setFailedNumber(null);
-            setElements(new Set([]));
+            setElements(new Set([1]));
+            // TODO: Find a better way to rerender
+            rerender(Math.random());
           },
         }
       );
     }, 300);
   }, [animate, failedNumber]);
 
+  console.log({ elementsSorted });
+
   return (
     <div ref={scope}>
       {/* <p>Current count: {count}</p> */}
       <div className='fixed top-6 left-6 text-lg text-gray-50 flex gap-8 items-center'>
-        <p>High score: 99</p>
+        <p>High score: {highscore}</p>
         <p className='underline text-lg'>Replay</p>
       </div>
       <div className='flex items-center gap-5'>
@@ -234,7 +262,10 @@ function App() {
           onSuccess={() => console.log('success')}
         /> */}
 
-        <div className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'>
+        <div
+          className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'
+          key={key}
+        >
           {[...elementsSorted].map((number) => (
             <NumberElement
               key={number}
