@@ -39,19 +39,8 @@ export class WebSocketServer extends DurableObject {
 	private connections: WebSocket[] = [];
 
 	async getCounterValue() {
-		let value = (await this.ctx.storage.get('value')) || 0;
-		return value;
-	}
-
-	async increment(amount = 1) {
 		const value: number = (await this.ctx.storage.get('value')) || 0;
-		// You do not have to worry about a concurrent request having modified the value in storage.
-		// "input gates" will automatically protect against unwanted concurrency.
-		// Read-modify-write is safe.
-		const newValue = value + amount;
-		await this.ctx.storage.put('value', newValue);
-
-		return newValue;
+		return value;
 	}
 
 	async setCounterValue(value: number) {
@@ -70,38 +59,13 @@ export class WebSocketServer extends DurableObject {
 		super(ctx, env);
 	}
 
-	/**
-	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
-	 *  Object instance receives a request from a Worker via the same method invocation on the stub
-	 *
-	 * @param name - The name provided to a Durable Object instance from a Worker
-	 * @returns The greeting to be sent back to the Worker
-	 */
-	async sayHello(name: string): Promise<string> {
-		const counter = await this.getCounterValue();
-		await this.increment();
-
-		return `Hello, ${counter}!`;
-	}
-
 	async fetch(request: Request): Promise<Response> {
 		// Creates two ends of a WebSocket connection.
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 
-		// this.sessions.set()
 		this.connections.push(server);
-
-		// Calling `accept()` tells the runtime that this WebSocket is to begin terminating
-		// request within the Durable Object. It has the effect of "accepting" the connection,
-		// and allowing the WebSocket to send and receive messages.
 		server.accept();
-
-		// server.addEventListener('open', async (event) => {
-		// 	console.log('WebSocket connection opened');
-		// 	const count = await this.getCounterValue();
-		// 	server.send(JSON.stringify({ hello: 'true' }));
-		// });
 
 		// Upon receiving a message from the client, the server replies with the same message,
 		// and the total number of connections with the "[Durable Object]: " prefix
@@ -112,29 +76,38 @@ export class WebSocketServer extends DurableObject {
 				const parsedData = JSON.parse(event.data as string);
 				console.log(event.data);
 
-				// todo: handle different types of message
-				// -> count
-				// -> request initial count
+				switch (parsedData.type) {
+					case 'initial': {
+						const count = await this.getCounterValue();
+						server.send(JSON.stringify({ count, type: 'count-updated' }));
 
-				if (parsedData.type === 'initial') {
-					server.send(JSON.stringify({ count: await this.getCounterValue() }));
-					return;
-				}
+						return;
+					}
+					case 'update-count': {
+						const currentCount = await this.getCounterValue();
 
-				if ('count' in parsedData && typeof parsedData.count === 'number') {
-					console.log('count', parsedData.count);
-					await this.setCounterValue(parsedData.count);
+						if (currentCount + 1 !== parsedData.count) {
+							await this.setCounterValue(0);
 
-					const updatedCount = await this.getCounterValue();
+							server.send(JSON.stringify({ type: 'failed' }));
 
-					this.connections.forEach((connection) => {
-						// check if connection is still open
-						try {
-							connection.send(JSON.stringify({ count: updatedCount }));
-						} catch (error) {
-							console.error('Error sending message to client', error);
+							return;
 						}
-					});
+
+						await this.setCounterValue(parsedData.count);
+
+						const updatedCount = await this.getCounterValue();
+
+						this.connections.forEach((connection) => {
+							try {
+								connection.send(JSON.stringify({ count: updatedCount, type: 'count-updated' }));
+							} catch (error) {
+								console.error('Error sending message to client', error);
+							}
+						});
+
+						return;
+					}
 				}
 			} catch (error) {
 				console.error(error);
