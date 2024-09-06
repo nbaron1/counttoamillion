@@ -99,28 +99,31 @@ function App() {
               );
             }
 
+            if (highscore && parsedData.value > highscore) {
+              setHighscore(parsedData.value);
+            }
+
             break;
           }
           case 'failed': {
-            // add the failed number to the end of the list
-            // fade it red
-            console.log('failed', parsedData.value);
-            console.log({ parsedData });
             setFailedNumber(parsedData.value);
 
-            // animate(
-            //   '.number-element',
-            //   { opacity: 0, y: 500 },
-            //   {
-            //     ease: 'anticipate',
-            //     duration: 1,
-            //     onComplete: () => {
-            //       // todo: aniamte failure
-            //     },
-            //   }
-            // );
-
-            // TODO: update UI to show error
+            setTimeout(() => {
+              animate(
+                '.number-element',
+                { opacity: 0, y: 500 },
+                {
+                  ease: 'backInOut',
+                  duration: 0.75,
+                  onComplete: () => {
+                    setFailedNumber(null);
+                    setElements(new Set([1]));
+                    // TODO: Find a better way to rerender
+                    rerender(Math.random());
+                  },
+                }
+              );
+            }, 300);
 
             console.log('Failed to update count');
           }
@@ -129,7 +132,7 @@ function App() {
         console.error(error);
       }
     },
-    [elements]
+    [animate, elements]
   );
 
   const handleError = useCallback((error: Event) => {
@@ -221,27 +224,6 @@ function App() {
       handleSubmit();
     }
   };
-
-  useEffect(() => {
-    if (failedNumber === null) return;
-
-    setTimeout(() => {
-      animate(
-        '.number-element',
-        { opacity: 0, y: 500 },
-        {
-          ease: 'backInOut',
-          duration: 0.75,
-          onComplete: () => {
-            setFailedNumber(null);
-            setElements(new Set([1]));
-            // TODO: Find a better way to rerender
-            rerender(Math.random());
-          },
-        }
-      );
-    }, 300);
-  }, [animate, failedNumber]);
 
   console.log({ elementsSorted });
 
