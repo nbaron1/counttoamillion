@@ -417,7 +417,7 @@ function App() {
   return (
     <div ref={scope}>
       {/* <p>Current count: {count}</p> */}
-      <div className='fixed top-6 left-6 text-lg text-gray-50 flex gap-8 items-center'>
+      <div className='fixed top-6 flex-col left-6 text-lg text-gray-50 flex'>
         <p>High score: {highscore}</p>
         <PreviousAttemptsDialog />
       </div>
@@ -431,6 +431,7 @@ function App() {
           onSuccess={() => console.log('success')}
         /> */}
 
+        {/* TODO: fix centering */}
         <div
           className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'
           key={key}
@@ -446,14 +447,14 @@ function App() {
             <FailedNumberElement number={failedNumber} />
           )}
         </div>
-        <div className='fixed border border-gray-600 justify-between bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-6 py-3 rounded-xl'>
+        <div className='fixed border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 flex items-center px-4 py-3 rounded-xl'>
           <input
-            placeholder='Write a number'
+            placeholder='Write the next number'
             autoFocus
             ref={inputRef}
             value={inputValue}
             onKeyDown={handleKeyDown}
-            className='w-60 text-white bg-transparent outline-none text-xl'
+            className='flex-1 pl-2 text-white bg-transparent outline-none text-xl min-w-0'
             onChange={(event) => setInputValue(event.target.value)}
           />
           <button
