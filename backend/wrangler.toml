@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "countinorder-backend"
+name = "countto101-backend"
 main = "src/index.ts"
 compatibility_date = "2024-09-03"
 
@@ -43,7 +43,7 @@ compatibility_date = "2024-09-03"
 
 [[d1_databases]]
 binding = "DB" # i.e. available in your Worker on env.DB
-database_name = "countinorder"
+database_name = "countto101"
 database_id = "27ce415a-86b5-4503-83a9-a7a0b2fc9432"
 preview_database_id = "DB"
 

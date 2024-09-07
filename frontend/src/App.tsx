@@ -223,7 +223,7 @@ function PreviousAttemptsDialog() {
         Previous attempts
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className='DialogOverlay fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
+        <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
         <Dialog.Content className='DialogContent flex gap-8 sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
@@ -395,7 +395,7 @@ function Game({
       <a
         target='_blank'
         className='hidden sm:block fixed bottom-5 left-5'
-        href='https://github.com/noahbaron91/countinorder'
+        href='https://github.com/noahbaron91/countto101'
       >
         <GitHubIcon />
       </a>
