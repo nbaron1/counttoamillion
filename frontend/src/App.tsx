@@ -63,26 +63,6 @@ function FailedNumberElement({ number }: { number: number }) {
   );
 }
 
-function CloseIcon() {
-  return (
-    <svg
-      className='w-6 sm:w-7'
-      width='24'
-      height='25'
-      viewBox='0 0 24 25'
-      fill='none'
-      xmlns='http://www.w3.org/2000/svg'
-    >
-      <path
-        fillRule='evenodd'
-        clipRule='evenodd'
-        d='M6.29289 6.79289C6.68342 6.40237 7.31658 6.40237 7.70711 6.79289L12 11.0858L16.2929 6.79289C16.6834 6.40237 17.3166 6.40237 17.7071 6.79289C18.0976 7.18342 18.0976 7.81658 17.7071 8.20711L13.4142 12.5L17.7071 16.7929C18.0976 17.1834 18.0976 17.8166 17.7071 18.2071C17.3166 18.5976 16.6834 18.5976 16.2929 18.2071L12 13.9142L7.70711 18.2071C7.31658 18.5976 6.68342 18.5976 6.29289 18.2071C5.90237 17.8166 5.90237 17.1834 6.29289 16.7929L10.5858 12.5L6.29289 8.20711C5.90237 7.81658 5.90237 7.18342 6.29289 6.79289Z'
-        fill='#A8A29E'
-      />
-    </svg>
-  );
-}
-
 const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
 
 if (!WEBSOCKET_HOST) {
@@ -285,6 +265,25 @@ function PreviousAttemptsDialog() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg
+      width='24'
+      height='24'
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        fillRule='evenodd'
+        clipRule='evenodd'
+        d='M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z'
+        fill='#A8A29E'
+      />
+    </svg>
+  );
+}
+
 function Game({
   failedNumber,
   highscore,
@@ -342,14 +341,56 @@ function Game({
   return (
     <div ref={scope}>
       <Dialog.Root>
+        <Dialog.Overlay className='fixed inset-0 bg-black opacity-50 z-40' />
+        <Dialog.Content className='DialogContent xl:w-[525px] fixed top-1/2 z-50 -translate-y-1/2 left-7 right-7 md:left-1/2 md:-translate-x-1/2 bg-gray-900 px-7 py-8 rounded-3xl gap-4 flex flex-col border border-gray-800'>
+          <div className='flex justify-between'>
+            <Dialog.Title className='text-3xl text-white'>
+              I{"'"}m glad!
+            </Dialog.Title>
+            <Dialog.Close>
+              <CloseIcon />
+            </Dialog.Close>
+          </div>
+
+          <Dialog.Description asChild>
+            <div className='xl:text-lg flex gap-3 flex-col'>
+              <p>
+                You can view a full list of my projects on{' '}
+                <a
+                  href='https://nbaron.com'
+                  target='_blank'
+                  className='underline text-accent'
+                >
+                  nbaron.com
+                </a>
+              </p>
+              <p>
+                If you want to fund my future projects or show your appreciation
+                for my work{' '}
+                <a
+                  href='https://buymeacoffee.com/noahbaron'
+                  className='underline text-accent'
+                  target='_blank'
+                >
+                  you can buy me a coffee
+                </a>
+              </p>
+              <p>I have soooo many projects I can’t wait to build</p>
+              <p>Thank you {':)'}</p>
+            </div>
+          </Dialog.Description>
+          <Dialog.Close
+            type='button'
+            className='bg-gray-800 border border-gray-700 rounded py-3'
+          >
+            Close
+          </Dialog.Close>
+          <Dialog.Close></Dialog.Close>
+        </Dialog.Content>
         <Dialog.Trigger className='text-gray-500 underline fixed top-5 right-5 sm:bottom-5 sm:top-auto'>
           <span className='sm:hidden'>enjoy this?</span>
           <span className='hidden sm:block'>enjoy this website?</span>
         </Dialog.Trigger>
-        <Dialog.Portal>
-          <Dialog.Overlay />
-          <Dialog.Content></Dialog.Content>
-        </Dialog.Portal>
       </Dialog.Root>
       <a
         target='_blank'
