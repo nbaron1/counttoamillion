@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useAnimate } from 'framer-motion';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
+import { AnimationScope, motion, useAnimate } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import './dialog.css';
@@ -278,162 +285,32 @@ function PreviousAttemptsDialog() {
   );
 }
 
-function App() {
-  const [inputValue, setInputValue] = useState('');
-
-  const websocketRef = useRef<WebSocket | null>(null);
+function Game({
+  failedNumber,
+  highscore,
+  userCount,
+  elements,
+  onSubmit,
+  scope,
+  keyValue,
+}: {
+  failedNumber: null | number;
+  highscore: number;
+  userCount: number;
+  elements: Set<number>;
+  onSubmit: (value: number) => void;
+  scope: AnimationScope;
+  keyValue: number;
+}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [elements, setElements] = useState<Set<number>>(new Set([]));
+  const highestNumber = useMemo(() => Math.max(...elements), [elements]);
+  const [inputValue, setInputValue] = useState('');
 
-  // TODO: remove this
-  const [key, rerender] = useState(Math.random());
+  const elementsSorted = Array.from(elements).sort((a, b) => a - b);
 
-  const [scope, animate] = useAnimate();
-  const [failedNumber, setFailedNumber] = useState<null | number>(null);
-  const [highscore, setHighscore] = useState<null | number>(null);
-  const [userCount, setUserCount] = useState<null | number>(null);
-
-  const handleMessage = useCallback(
-    (event: MessageEvent) => {
-      console.log('Message from server ', event.data);
-      try {
-        const parsedData = JSON.parse(event.data as string);
-
-        switch (parsedData.type) {
-          case 'initial': {
-            const previousElements = Array.from({ length: 10 }).map(
-              (_, i) => parsedData.value - i
-            );
-
-            const previousElementsGreaterThanZero = previousElements.filter(
-              (value) => value > 0
-            );
-
-            setElements(new Set([...previousElementsGreaterThanZero]));
-            setUserCount(parsedData.userCount);
-            setHighscore(parsedData.highScore);
-
-            console.log('is here!!');
-
-            break;
-          }
-          case 'count-updated': {
-            if (elements.size === 0) {
-              console.log(elements.size);
-              return;
-            }
-
-            const highestNumber = Math.max(...elements);
-
-            if (parsedData.value > highestNumber) {
-              const difference = parsedData.value - highestNumber;
-
-              const additionalElements: number[] = [];
-
-              Array.from({
-                length: difference,
-              }).map((_, i) => {
-                additionalElements.push(highestNumber + i + 1);
-              });
-
-              setElements(
-                (prevElements) =>
-                  new Set([...prevElements, ...additionalElements])
-              );
-            }
-
-            if (highscore && parsedData.value > highscore) {
-              setHighscore(parsedData.value);
-            }
-
-            break;
-          }
-          case 'failed': {
-            setFailedNumber(parsedData.value);
-
-            setTimeout(() => {
-              animate(
-                '.number-element',
-                { opacity: 0, y: 500 },
-                {
-                  ease: 'backInOut',
-                  duration: 0.75,
-                  onComplete: () => {
-                    setFailedNumber(null);
-                    setElements(new Set([1]));
-                    // TODO: Find a better way to rerender
-                    rerender(Math.random());
-                  },
-                }
-              );
-            }, 300);
-
-            console.log('Failed to update count');
-            break;
-          }
-          case 'user-count': {
-            console.log({ userCount: parsedData.value });
-            setUserCount(parsedData.value);
-
-            break;
-          }
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    [animate, elements, highscore]
-  );
-
-  const handleError = useCallback((error: Event) => {
-    console.log('Error connecting to server', error);
-  }, []);
-
-  const handleClose = useCallback((event: CloseEvent) => {
-    // TODO: handle reconnection
-    console.log('Connection closed', event);
-  }, []);
-
-  const handleOpen = useCallback((event: Event) => {
-    if (!websocketRef.current) return;
-
-    console.log('Connected to server', event);
-    console.log('Sending initial message...');
-
-    websocketRef.current.send(JSON.stringify({ type: 'initial' }));
-  }, []);
-
-  useEffect(() => {
-    if (!websocketRef.current) {
-      const host = `${WEBSOCKET_HOST}/v1/websocket`;
-      websocketRef.current = new WebSocket(host);
-    }
-
-    const websocket = websocketRef.current;
-
-    websocket.addEventListener('open', handleOpen);
-    websocket.addEventListener('close', handleClose);
-    websocket.addEventListener('message', handleMessage);
-    websocket.addEventListener('error', handleError);
-
-    return () => {
-      websocket.removeEventListener('open', handleOpen);
-      websocket.removeEventListener('message', handleMessage);
-      websocket.removeEventListener('error', handleError);
-      websocket.removeEventListener('close', handleClose);
-    };
-  }, [elements, handleClose, handleError, handleMessage, handleOpen]);
-
-  const handleSubmit = async () => {
-    const websocket = websocketRef.current;
-
-    if (!websocket) {
-      return;
-    }
-
+  const handleSubmit = () => {
     const inputNumberValue = Number.parseInt(inputValue, 10);
-    console.log({ inputNumberValue });
 
     // TODO: Error handling
     if (Number.isNaN(inputNumberValue)) {
@@ -449,18 +326,10 @@ function App() {
       return;
     }
 
-    websocket.send(
-      JSON.stringify({ type: 'update-count', value: inputNumberValue })
-    );
-
+    onSubmit(inputNumberValue);
     setInputValue('');
     inputRef.current?.focus();
   };
-
-  console.log({ elements });
-  const highestNumber = useMemo(() => Math.max(...elements), [elements]);
-
-  const elementsSorted = Array.from(elements).sort((a, b) => a - b);
 
   const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
     event
@@ -469,8 +338,6 @@ function App() {
       handleSubmit();
     }
   };
-
-  console.log({ elementsSorted });
 
   return (
     <div ref={scope}>
@@ -516,7 +383,7 @@ function App() {
         {/* TODO: fix centering */}
         <div
           className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'
-          key={key}
+          key={keyValue}
         >
           {[...elementsSorted].map((number) => (
             <NumberElement
@@ -568,6 +435,285 @@ function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+type State = {
+  isLoading: boolean;
+  userCount: number;
+  highscore: number;
+  elements: Set<number>;
+  failedNumber: number | null;
+};
+
+type Action =
+  | {
+      type: 'initial';
+      highScore: number;
+      userCount: number;
+      value: number;
+    }
+  | { type: 'update-user-count'; value: number }
+  | { type: 'update-count'; value: number }
+  | { type: 'start-failed-number-animation'; value: number }
+  | { type: 'complete-failed-number-animation'; value: number | null }
+  | { type: 'disconnect' };
+
+const initialState: State = {
+  elements: new Set([]),
+  failedNumber: null,
+  isLoading: true,
+  highscore: 0,
+  userCount: 0,
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'initial': {
+      const previousElements = Array.from({ length: 10 }).map(
+        (_, i) => action.value - i
+      );
+
+      const previousElementsGreaterThanZero = previousElements.filter(
+        (value) => value > 0
+      );
+
+      const elementsSet = new Set([...previousElementsGreaterThanZero]);
+
+      return {
+        ...state,
+        isLoading: false,
+        highscore: action.highScore,
+        userCount: action.userCount,
+        elements: elementsSet,
+      };
+    }
+    case 'update-count': {
+      const highestNumber = Math.max(...state.elements);
+
+      let elements = state.elements;
+
+      if (action.value > highestNumber) {
+        const difference = action.value - highestNumber;
+
+        const additionalElements: number[] = [];
+
+        Array.from({
+          length: difference,
+        }).map((_, i) => {
+          additionalElements.push(highestNumber + i + 1);
+        });
+
+        elements = new Set([...elements, ...additionalElements]);
+      }
+
+      if (state.highscore < action.value) {
+        return {
+          ...state,
+          elements,
+          highscore: action.value,
+        };
+      }
+
+      return {
+        ...state,
+        elements,
+      };
+    }
+    case 'update-user-count': {
+      console.log('Updating user count', action.value);
+
+      return {
+        ...state,
+        userCount: action.value,
+      };
+    }
+    case 'start-failed-number-animation': {
+      return {
+        ...state,
+        failedNumber: action.value,
+      };
+    }
+    case 'complete-failed-number-animation': {
+      return {
+        ...state,
+        failedNumber: action.value,
+        elements: new Set([1]),
+      };
+    }
+    case 'disconnect': {
+      return {
+        ...state,
+        isLoading: true,
+      };
+    }
+  }
+}
+
+function Spinner() {
+  return (
+    <div className='animate-spin w-11 h-11 border-4 border-solid border-white border-b-transparent rounded-[50%]'></div>
+  );
+}
+
+function App() {
+  const websocketRef = useRef<WebSocket | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const [key, rerender] = useState(Math.random());
+  const [scope, animate] = useAnimate();
+
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
+      try {
+        const parsedData = JSON.parse(event.data as string);
+
+        console.log(parsedData.type);
+
+        switch (parsedData.type) {
+          case 'initial': {
+            dispatch({
+              type: 'initial',
+              highScore: parsedData.highScore,
+              userCount: parsedData.userCount,
+              value: parsedData.value,
+            });
+
+            break;
+          }
+          case 'count-updated': {
+            if (state.isLoading) {
+              return;
+            }
+
+            dispatch({
+              type: 'update-count',
+              value: parsedData.value,
+            });
+
+            break;
+          }
+          case 'failed': {
+            dispatch({
+              type: 'start-failed-number-animation',
+              value: parsedData.value,
+            });
+
+            setTimeout(() => {
+              animate(
+                '.number-element',
+                { opacity: 0, y: 500 },
+                {
+                  ease: 'backInOut',
+                  duration: 0.75,
+                  onComplete: () => {
+                    dispatch({
+                      type: 'complete-failed-number-animation',
+                      value: null,
+                    });
+
+                    // TODO: Find a better way to rerender
+                    rerender(Math.random());
+                  },
+                }
+              );
+            }, 300);
+
+            console.log('Failed to update count');
+            break;
+          }
+          case 'user-count': {
+            dispatch({
+              value: parsedData.value,
+              type: 'update-user-count',
+            });
+
+            break;
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [animate, state.isLoading]
+  );
+
+  const handleError = useCallback((event: Event) => {
+    console.log('Websocket error', event);
+    dispatch({ type: 'disconnect' });
+  }, []);
+
+  const handleClose = useCallback(() => {
+    dispatch({ type: 'disconnect' });
+    websocketRef.current = null;
+
+    // Attempt to reconnect after 1.5 seconds
+    setTimeout(() => {
+      connectWebSocket();
+    }, 1500);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleOpen = useCallback((event: Event) => {
+    if (!websocketRef.current) return;
+
+    console.log('Connected to server', event);
+    console.log('Sending initial message...');
+
+    websocketRef.current.send(JSON.stringify({ type: 'initial' }));
+  }, []);
+
+  const connectWebSocket = useCallback(() => {
+    console.log('Connecting to websocket...');
+    if (!websocketRef.current) {
+      websocketRef.current = new WebSocket(`${WEBSOCKET_HOST}/v1/websocket`);
+    }
+
+    websocketRef.current?.addEventListener('open', handleOpen);
+    websocketRef.current?.addEventListener('message', handleMessage);
+    websocketRef.current?.addEventListener('close', handleClose);
+    websocketRef.current?.addEventListener('error', handleError);
+  }, [handleClose, handleError, handleMessage, handleOpen]);
+
+  useEffect(() => {
+    connectWebSocket();
+
+    return () => {
+      if (websocketRef.current) {
+        websocketRef.current.removeEventListener('open', handleOpen);
+        websocketRef.current.removeEventListener('message', handleMessage);
+        websocketRef.current.removeEventListener('close', handleClose);
+        websocketRef.current.removeEventListener('error', handleError);
+      }
+    };
+  }, [connectWebSocket, handleClose, handleError, handleMessage, handleOpen]);
+
+  const handleSubmit = async (value: number) => {
+    if (!websocketRef.current) {
+      return;
+    }
+
+    websocketRef.current.send(JSON.stringify({ type: 'update-count', value }));
+  };
+
+  if (state.isLoading) {
+    return (
+      <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+        <Spinner />
+      </div>
+    );
+  }
+
+  return (
+    <Game
+      elements={state.elements}
+      failedNumber={state.failedNumber}
+      highscore={state.highscore}
+      userCount={state.userCount}
+      keyValue={key}
+      onSubmit={handleSubmit}
+      scope={scope}
+    />
   );
 }
 
