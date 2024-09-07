@@ -22,6 +22,8 @@ export interface Env {
 	//
 	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
 	WEBSOCKET_SERVER: DurableObjectNamespace<WebSocketServer>;
+
+	DB: D1Database;
 	//
 	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
 	// MY_BUCKET: R2Bucket;
@@ -34,7 +36,7 @@ export interface Env {
 }
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
-export class WebSocketServer extends DurableObject {
+export class WebSocketServer extends DurableObject<Env> {
 	// private sessions: Map<string, WebSocket>;
 	private connections: WebSocket[] = [];
 
@@ -70,12 +72,23 @@ export class WebSocketServer extends DurableObject {
 	}
 
 	async fetch(request: Request): Promise<Response> {
+		// const result = await query.first();
+		// console.log({ result });
+
 		// Creates two ends of a WebSocket connection.
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 
 		this.connections.push(server);
 		server.accept();
+
+		this.connections.forEach((connection) => {
+			try {
+				connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
+			} catch (error) {
+				console.error('Error sending message to client', error);
+			}
+		});
 
 		// Upon receiving a message from the client, the server replies with the same message,
 		// and the total number of connections with the "[Durable Object]: " prefix
@@ -90,9 +103,10 @@ export class WebSocketServer extends DurableObject {
 					case 'initial': {
 						const value = await this.getCounterValue();
 						const highScore = await this.getHighScore();
+						const userCount = this.connections.length;
 
 						try {
-							server.send(JSON.stringify({ value, type: 'initial', highScore }));
+							server.send(JSON.stringify({ value, type: 'initial', highScore, userCount }));
 						} catch (error) {
 							console.error('Error sending message to client', error);
 						}
@@ -104,6 +118,9 @@ export class WebSocketServer extends DurableObject {
 
 						if (currentCount + 1 !== parsedData.value) {
 							await this.setCounterValue(1);
+
+							const query = this.env.DB.prepare('INSERT INTO attempt (max_count) VALUES (?)').bind(currentCount);
+							await query.run();
 
 							this.connections.forEach((connection) => {
 								try {
@@ -144,11 +161,27 @@ export class WebSocketServer extends DurableObject {
 		server.addEventListener('close', (cls) => {
 			this.connections = this.connections.filter((connection) => connection !== server);
 			server.close(cls.code, 'Durable Object is closing WebSocket');
+
+			this.connections.forEach((connection) => {
+				try {
+					connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
+				} catch (error) {
+					console.error('Error sending message to client', error);
+				}
+			});
 		});
 
 		server.addEventListener('error', (error) => {
 			this.connections = this.connections.filter((connection) => connection !== server);
 			console.error('WebSocket error', error);
+
+			this.connections.forEach((connection) => {
+				try {
+					connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
+				} catch (error) {
+					console.error('Error sending message to client', error);
+				}
+			});
 		});
 
 		return new Response(null, {
@@ -157,6 +190,8 @@ export class WebSocketServer extends DurableObject {
 		});
 	}
 }
+
+const PAGE_SIZE = 50;
 
 export default {
 	/**
@@ -168,33 +203,78 @@ export default {
 	 * @returns The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx): Promise<Response> {
-		if (request.url.endsWith('/websocket')) {
-			const upgradeHeader = request.headers.get('Upgrade');
+		console.log(new URL(request.url).pathname);
 
-			if (!upgradeHeader || upgradeHeader !== 'websocket') {
-				return new Response('Durable Object expected Upgrade: websocket', { status: 426 });
+		const pathName = new URL(request.url).pathname;
+
+		console.log('Pathname', pathName);
+
+		switch (pathName) {
+			case '/v1/websocket': {
+				const upgradeHeader = request.headers.get('Upgrade');
+
+				if (!upgradeHeader || upgradeHeader !== 'websocket') {
+					return new Response('Durable Object expected Upgrade: websocket', { status: 426 });
+				}
+
+				let id = env.WEBSOCKET_SERVER.idFromName('main');
+				let stub = env.WEBSOCKET_SERVER.get(id);
+
+				return stub.fetch(request);
 			}
+			case '/v1/attempts': {
+				const responseHeaders = new Headers();
+				// tood: change allowed based on dev / prod mode
+				responseHeaders.set('Access-Control-Allow-Origin', '*');
 
-			let id = env.WEBSOCKET_SERVER.idFromName('main');
-			let stub = env.WEBSOCKET_SERVER.get(id);
+				if (request.method !== 'GET') {
+					return new Response('Method not allowed', { status: 405 });
+				}
 
-			return stub.fetch(request);
+				const filter = new URL(request.url).searchParams.get('filter') ?? 'latest';
 
-			// We will create a `DurableObjectId` using the pathname from the Worker request
-			// This id refers to a unique instance of our 'MyDurableObject' class above
-			// let id: DurableObjectId = env.WEBSOCKET_SERVER.idFromName(new URL(request.url).pathname);
+				const page = Number(new URL(request.url).searchParams.get('page')) ?? 1;
 
-			// // This stub creates a communication channel with the Durable Object instance
-			// // The Durable Object constructor will be invoked upon the first call for a given id
-			// let stub = env.WEBSOCKET_SERVER.get(id);
+				if (filter !== 'latest' && filter !== 'top') {
+					return new Response('Invalid filter', { status: 400, headers: responseHeaders });
+				}
 
-			// // We call the `sayHello()` RPC method on the stub to invoke the method on the remote
-			// // Durable Object instance
-			// let greeting = await stub.sayHello('world');
+				const query =
+					filter === 'latest'
+						? env.DB.prepare('SELECT * FROM attempt ORDER BY created_at DESC LIMIT ?1 OFFSET ?2').bind(PAGE_SIZE, (page - 1) * PAGE_SIZE)
+						: env.DB.prepare('SELECT * FROM attempt ORDER BY max_count DESC, created_at DESC LIMIT ?1 OFFSET ?2').bind(
+								PAGE_SIZE,
+								(page - 1) * PAGE_SIZE
+						  );
 
-			// return new Response(greeting);
+				const attempts = await query.all();
+
+				if (!attempts.success) {
+					return new Response('Internal server error', { status: 500, headers: responseHeaders });
+				}
+
+				const numberOfRowsResult = await env.DB.prepare('SELECT COUNT(*) FROM attempt').first();
+
+				if (!numberOfRowsResult) {
+					return new Response('Internal server error', { status: 500, headers: responseHeaders });
+				}
+
+				const numberOfRows = numberOfRowsResult['COUNT(*)'];
+
+				if (typeof numberOfRows !== 'number') {
+					return new Response('Internal server error', { status: 500, headers: responseHeaders });
+				}
+
+				const hasNextPage = numberOfRows > page * PAGE_SIZE;
+
+				return new Response(JSON.stringify({ data: attempts.results, success: true, hasNextPage }), {
+					status: 200,
+					headers: responseHeaders,
+				});
+			}
+			default: {
+				return new Response('Not Found', { status: 404 });
+			}
 		}
-
-		return new Response('Not Found', { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
