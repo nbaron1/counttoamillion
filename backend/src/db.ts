@@ -1,14 +1,14 @@
 import { Client } from 'pg';
 import { config } from './config';
 
-console.log(process.env.APP_ENV);
+console.log(process.env.APP_ENV === 'production');
 
 const db = new Client({
   connectionString: config.databaseURL,
   ...(process.env.APP_ENV === 'production' && {
     ssl: {
       rejectUnauthorized: false,
-      // ca: process.env.CA_CERT
+      ca: process.env.CA_CERT,
     },
   }),
 });
