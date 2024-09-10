@@ -116,6 +116,16 @@ app.ws('/v1/websocket', (ws) => {
   console.log('Connected!');
   connections.push(ws);
 
+  connections.forEach((connection) => {
+    try {
+      connection.send(
+        JSON.stringify({ type: 'user-count', value: connections.length })
+      );
+    } catch (error) {
+      console.error('Error sending message to client', error);
+    }
+  });
+
   ws.on('error', console.error);
 
   ws.on('message', async function message(data) {
