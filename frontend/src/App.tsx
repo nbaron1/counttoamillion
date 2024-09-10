@@ -66,7 +66,7 @@ const useAttempts = ({
   page: number;
 }) => {
   const [data, setData] = useState<
-    { id: number; created_at: string; max_count: number }[]
+    { id: number; created_at: string; count: number }[]
   >([]);
   const [hasNextPage, setHasNextPage] = useState(false);
 
@@ -94,7 +94,7 @@ const useAttempts = ({
   return { data, hasNextPage };
 };
 
-type Attempt = { max_count: number; id: number; created_at: string };
+type Attempt = { count: number; id: number; created_at: string };
 
 function getTimeSince(utcTimestamp: string): string {
   // Parse the UTC timestamp
@@ -128,7 +128,7 @@ function PreviousAttempt({ attempt }: { attempt: Attempt }) {
 
   return (
     <div className='flex flex-col'>
-      <p className='text-gray-50 text-lg sm:text-xl'>{attempt.max_count}</p>
+      <p className='text-gray-50 text-lg sm:text-xl'>{attempt.count}</p>
       <p className='text-gray-400 text-lg'>{timeSince}</p>
     </div>
   );
@@ -190,7 +190,7 @@ function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
 type AttemptFilter = 'latest' | 'top';
 
 function PreviousAttemptsDialog() {
-  const [type, setType] = useState<AttemptFilter>('latest');
+  const [type, setType] = useState<AttemptFilter>('top');
 
   const handleValueChange = (value: string) => {
     if (value !== 'latest' && value !== 'top') {
@@ -223,16 +223,16 @@ function PreviousAttemptsDialog() {
               className='bg-gray-900 border border-gray-800 rounded-lg px-2 flex py-[6px]'
             >
               <RadioGroup.Item
+                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded py-1'
+                value='top'
+              >
+                Closest
+              </RadioGroup.Item>
+              <RadioGroup.Item
                 className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded'
                 value='latest'
               >
                 Latest
-              </RadioGroup.Item>
-              <RadioGroup.Item
-                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded py-1'
-                value='top'
-              >
-                Highest
               </RadioGroup.Item>
             </RadioGroup.Root>
           </div>
@@ -339,14 +339,17 @@ function Game({
         built by nbaron
       </a>
       <div className='fixed sm:right-6 top-5 sm:justify-between left-5 text-lg text-gray-50 flex'>
-        <div className='flex flex-col sm:flex-row sm:gap-5 lg:gap-7'>
+        <div className='flex flex-col sm:flex-row sm:gap-5'>
           <p>High score: {highscore}</p>
           <PreviousAttemptsDialog />
         </div>
         <div className='hidden sm:flex items-center gap-3'>
           <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
           <p className='text-gray-50'>
-            {userCount} <span className='text-gray-400'>users online</span>
+            {userCount}{' '}
+            <span className='text-gray-400'>
+              {userCount === 1 ? 'user' : 'users'} online
+            </span>
           </p>
         </div>
       </div>
@@ -379,7 +382,9 @@ function Game({
         <div className='fixed bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-3'>
           <div className='sm:hidden flex items-center gap-2'>
             <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
-            <p className='text-gray-50'>100 users online</p>
+            <p className='text-gray-50'>
+              {userCount} {userCount === 1 ? 'user' : 'users'} online
+            </p>
           </div>
           <div className='border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
             <input

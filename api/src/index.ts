@@ -1,39 +1,51 @@
 import express from 'express';
 import { config } from './config';
-import WebSocket, { WebSocketServer } from 'ws';
-import pg from 'pg';
-import { createClient } from 'redis';
-const app = express();
+import expressWs from 'express-ws';
+import { type WebSocket } from 'ws';
+import { redis } from './redis';
+import { db } from './db';
+import cors from 'cors';
 
-app.get('/', (req, res) => {
-  res.send('Hello World');
-});
-
-const redis = createClient({ url: config.redisURL }).on('error', (err) =>
-  console.log('Redis Client Error', err)
+const app = expressWs(express()).app;
+app.use(
+  cors({ origin: ['http://localhost:3000', 'https://countinorder.com'] })
 );
 
-redis
-  .connect()
-  .then(() => {
-    console.log('Redis connected');
-  })
-  .catch((err) => {
-    console.error('Redis connection failed', err);
-  });
+const PAGE_SIZE = 50;
 
-const wss = new WebSocketServer({
-  port: config.port,
-  path: '/v1/websocket',
+app.get('/v1/attempts', async (req, res) => {
+  const filter = req.query.filter ?? 'latest';
+
+  const page = req.query.page ? Number(req.query.page) : 1;
+
+  if (filter !== 'latest' && filter !== 'top') {
+    res.status(400).send('Invalid filter');
+    return;
+  }
+
+  try {
+    const attempts = new Attempts();
+
+    const rows = await attempts.getRows({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      filter,
+    });
+
+    const numberOfRows = await new Attempts().getCount();
+
+    const hasNextPage = numberOfRows > page * PAGE_SIZE;
+
+    res.status(200).send({ data: rows, success: true, hasNextPage });
+  } catch (error) {
+    res.status(500).send('Internal server error');
+  }
 });
-
-// use redis queue to send messages to all connected clients
 
 class Counter {
   constructor() {}
   async getCounterValue() {
     const count = await redis.get('counter');
-
     return count ? parseInt(count) : 1;
   }
   async setCounterValue(value: number) {
@@ -43,8 +55,43 @@ class Counter {
 
 class Attempts {
   constructor() {}
-  async insertAttempt(value: number) {
-    return;
+
+  async addAttempt(count: number) {
+    await db.query('INSERT INTO attempt (count) VALUES ($1)', [count]);
+  }
+
+  async getCount() {
+    const numberOfRowsResult = await db.query(
+      'SELECT COUNT(*) AS count FROM attempt'
+    );
+
+    return Number(numberOfRowsResult.rows[0].count);
+  }
+
+  async getRows({
+    limit,
+    offset,
+    filter,
+  }: {
+    offset: number;
+    limit: number;
+    filter: 'latest' | 'top';
+  }) {
+    if (filter === 'latest') {
+      const query = await db.query(
+        'SELECT * FROM attempt ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+        [limit, offset]
+      );
+
+      return query.rows;
+    }
+
+    const query = await db.query(
+      'SELECT * FROM attempt ORDER BY count DESC, created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+
+    return query.rows;
   }
 }
 
@@ -63,11 +110,11 @@ class Highscore {
 const counter = new Counter();
 const highscore = new Highscore();
 
-const connections: WebSocket[] = [];
+let connections: WebSocket[] = [];
 
-wss.on('connection', function connection(ws) {
-  connections.push(ws);
+app.ws('/v1/websocket', (ws) => {
   console.log('Connected!');
+  connections.push(ws);
 
   ws.on('error', console.error);
 
@@ -97,10 +144,7 @@ wss.on('connection', function connection(ws) {
           if (currentCount + 1 !== parsedData.value) {
             await counter.setCounterValue(1);
 
-            // const query = this.env.DB.prepare(
-            //   'INSERT INTO attempt (max_count) VALUES (?)'
-            // ).bind(currentCount);
-            // await query.run();
+            await new Attempts().addAttempt(currentCount);
 
             connections.forEach((connection) => {
               try {
@@ -144,5 +188,21 @@ wss.on('connection', function connection(ws) {
     }
   });
 
-  ws.send('something');
+  ws.on('close', (cls) => {
+    connections = connections.filter((connection) => connection !== ws);
+
+    connections.forEach((connection) => {
+      try {
+        connection.send(
+          JSON.stringify({ type: 'user-count', value: connections.length })
+        );
+      } catch (error) {
+        console.error('Error sending message to client', error);
+      }
+    });
+  });
+});
+
+app.listen(config.port, () => {
+  console.log(`Server started on port ${config.port}`);
 });
