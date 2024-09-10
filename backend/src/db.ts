@@ -7,12 +7,12 @@ console.log('CA_CERT', process.env.CA_CERT);
 
 const db = new Client({
   connectionString: config.databaseURL,
-  ...(process.env.APP_ENV === 'production' && {
-    ssl: {
-      rejectUnauthorized: false,
-      ca: process.env.CA_CERT,
-    },
-  }),
+  // ...(process.env.APP_ENV === 'production' && {
+  //   ssl: {
+  //     rejectUnauthorized: false,
+  //     ca: process.env.CA_CERT,
+  //   },
+  // }),
 });
 
 db.connect().then(() => {
