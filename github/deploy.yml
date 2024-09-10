@@ -1,0 +1,20 @@
+name: Deploy
+on: [push]
+jobs:
+  # deploy-app:
+  #   runs-on: ubuntu-latest
+  #    - name: Deploy the backend to DigitalOcean
+  #       uses: digitalocean/app_action/deploy@v2
+  #       with:
+  #         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+  #     - name: Deploy the frontend to Cloudflare pages
+  #       uses: cloudflare/pages-action@1.0.0
+  #       with:
+  #        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  #         accountId: YOUR_ACCOUNT_ID
+  #         projectName: YOUR_PROJECT_NAME
+  #         directory: YOUR_BUILD_OUTPUT_DIRECTORY
+  #         gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+  #         branch: main
+  #         workingDirectory: frontend
+  #         wranglerVersion: '3'
