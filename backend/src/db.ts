@@ -3,7 +3,7 @@ import { config } from './config';
 
 const db = new Client({
   connectionString: config.databaseURL,
-  ...(process.env.NODE_ENV === 'production' && {
+  ...(process.env.APP_ENV === 'production' && {
     ssl: { rejectUnauthorized: false, ca: process.env.CA_CERT },
   }),
 });
