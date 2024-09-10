@@ -3,6 +3,8 @@ import { config } from './config';
 
 console.log(process.env.APP_ENV === 'production');
 
+console.log('CA_CERT', process.env.CA_CERT);
+
 const db = new Client({
   connectionString: config.databaseURL,
   ...(process.env.APP_ENV === 'production' && {
