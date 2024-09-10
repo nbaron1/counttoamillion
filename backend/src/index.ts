@@ -1,280 +1,218 @@
-import { DurableObject } from 'cloudflare:workers';
+import express from 'express';
+import { config } from './config';
+import expressWs from 'express-ws';
+import { type WebSocket } from 'ws';
+import { redis } from './redis';
+import { db } from './db';
+import cors from 'cors';
 
-/**
- * Welcome to Cloudflare Workers! This is your first Durable Objects application.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your Durable Object in action
- * - Run `npm run deploy` to publish your application
- *
- * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/durable-objects
- */
-
-/**
- * Associate bindings declared in wrangler.toml with the TypeScript type system
- */
-export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	WEBSOCKET_SERVER: DurableObjectNamespace<WebSocketServer>;
-
-	DB: D1Database;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
-}
-
-/** A Durable Object's behavior is defined in an exported Javascript class */
-export class WebSocketServer extends DurableObject<Env> {
-	// private sessions: Map<string, WebSocket>;
-	private connections: WebSocket[] = [];
-
-	async getCounterValue() {
-		const value: number = (await this.ctx.storage.get('value')) || 0;
-		return value;
-	}
-
-	async getHighScore() {
-		const highScore: number = (await this.ctx.storage.get('highScore')) || 0;
-		return highScore;
-	}
-
-	async setHighScore(value: number) {
-		console.log('Setting high score to', value);
-		await this.ctx.storage.put('highScore', value);
-	}
-
-	async setCounterValue(value: number) {
-		console.log('Setting value to', value);
-		await this.ctx.storage.put('value', value);
-	}
-
-	/**
-	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
-	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
-	 *
-	 * @param ctx - The interface for interacting with Durable Object state
-	 * @param env - The interface to reference bindings declared in wrangler.toml
-	 */
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env);
-	}
-
-	async fetch(request: Request): Promise<Response> {
-		// const result = await query.first();
-		// console.log({ result });
-
-		// Creates two ends of a WebSocket connection.
-		const webSocketPair = new WebSocketPair();
-		const [client, server] = Object.values(webSocketPair);
-
-		this.connections.push(server);
-		server.accept();
-
-		this.connections.forEach((connection) => {
-			try {
-				connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
-			} catch (error) {
-				console.error('Error sending message to client', error);
-			}
-		});
-
-		// Upon receiving a message from the client, the server replies with the same message,
-		// and the total number of connections with the "[Durable Object]: " prefix
-		server.addEventListener('message', async (event) => {
-			try {
-				console.log('Num of connections', this.connections.length);
-
-				const parsedData = JSON.parse(event.data as string);
-				console.log(event.data);
-
-				switch (parsedData.type) {
-					case 'initial': {
-						const value = await this.getCounterValue();
-						const highScore = await this.getHighScore();
-						const userCount = this.connections.length;
-
-						try {
-							server.send(JSON.stringify({ value, type: 'initial', highScore, userCount }));
-						} catch (error) {
-							console.error('Error sending message to client', error);
-						}
-
-						return;
-					}
-					case 'update-count': {
-						const currentCount = await this.getCounterValue();
-
-						if (currentCount + 1 !== parsedData.value) {
-							await this.setCounterValue(1);
-
-							const query = this.env.DB.prepare('INSERT INTO attempt (max_count) VALUES (?)').bind(currentCount);
-							await query.run();
-
-							this.connections.forEach((connection) => {
-								try {
-									connection.send(JSON.stringify({ type: 'failed', value: parsedData.value }));
-								} catch (error) {
-									console.error('Error sending message to client', error);
-								}
-							});
-
-							return;
-						}
-
-						await this.setCounterValue(parsedData.value);
-
-						this.connections.forEach((connection) => {
-							try {
-								connection.send(JSON.stringify({ value: parsedData.value, type: 'count-updated' }));
-							} catch (error) {
-								console.error('Error sending message to client', error);
-							}
-						});
-
-						const highScore = await this.getHighScore();
-
-						if (parsedData.value > highScore) {
-							await this.setHighScore(parsedData.value);
-						}
-
-						return;
-					}
-				}
-			} catch (error) {
-				console.error(error);
-			}
-		});
-
-		// If the client closes the connection, the runtime will close the connection too.
-		server.addEventListener('close', (cls) => {
-			this.connections = this.connections.filter((connection) => connection !== server);
-			server.close(cls.code, 'Durable Object is closing WebSocket');
-
-			this.connections.forEach((connection) => {
-				try {
-					connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
-				} catch (error) {
-					console.error('Error sending message to client', error);
-				}
-			});
-		});
-
-		server.addEventListener('error', (error) => {
-			this.connections = this.connections.filter((connection) => connection !== server);
-			console.error('WebSocket error', error);
-
-			this.connections.forEach((connection) => {
-				try {
-					connection.send(JSON.stringify({ type: 'user-count', value: this.connections.length }));
-				} catch (error) {
-					console.error('Error sending message to client', error);
-				}
-			});
-		});
-
-		return new Response(null, {
-			status: 101,
-			webSocket: client,
-		});
-	}
-}
+const app = expressWs(express()).app;
+app.use(
+  cors({ origin: ['http://localhost:3000', 'https://countinorder.com'] })
+);
 
 const PAGE_SIZE = 50;
 
-export default {
-	/**
-	 * This is the standard fetch handler for a Cloudflare Worker
-	 *
-	 * @param request - The request submitted to the Worker from the client
-	 * @param env - The interface to reference bindings declared in wrangler.toml
-	 * @param ctx - The execution context of the Worker
-	 * @returns The response to be sent back to the client
-	 */
-	async fetch(request, env, ctx): Promise<Response> {
-		console.log(new URL(request.url).pathname);
+app.get('/v1/attempts', async (req, res) => {
+  const filter = req.query.filter ?? 'latest';
 
-		const pathName = new URL(request.url).pathname;
+  const page = req.query.page ? Number(req.query.page) : 1;
 
-		console.log('Pathname', pathName);
+  if (filter !== 'latest' && filter !== 'top') {
+    res.status(400).send('Invalid filter');
+    return;
+  }
 
-		switch (pathName) {
-			case '/v1/websocket': {
-				const upgradeHeader = request.headers.get('Upgrade');
+  try {
+    const attempts = new Attempts();
 
-				if (!upgradeHeader || upgradeHeader !== 'websocket') {
-					return new Response('Durable Object expected Upgrade: websocket', { status: 426 });
-				}
+    const rows = await attempts.getRows({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      filter,
+    });
 
-				let id = env.WEBSOCKET_SERVER.idFromName('main');
-				let stub = env.WEBSOCKET_SERVER.get(id);
+    const numberOfRows = await new Attempts().getCount();
 
-				return stub.fetch(request);
-			}
-			case '/v1/attempts': {
-				const responseHeaders = new Headers();
-				// tood: change allowed based on dev / prod mode
-				responseHeaders.set('Access-Control-Allow-Origin', '*');
+    const hasNextPage = numberOfRows > page * PAGE_SIZE;
 
-				if (request.method !== 'GET') {
-					return new Response('Method not allowed', { status: 405 });
-				}
+    res.status(200).send({ data: rows, success: true, hasNextPage });
+  } catch (error) {
+    res.status(500).send('Internal server error');
+  }
+});
 
-				const filter = new URL(request.url).searchParams.get('filter') ?? 'latest';
+class Counter {
+  constructor() {}
+  async getCounterValue() {
+    const count = await redis.get('counter');
+    return count ? parseInt(count) : 1;
+  }
+  async setCounterValue(value: number) {
+    await redis.set('counter', value);
+  }
+}
 
-				const page = Number(new URL(request.url).searchParams.get('page')) ?? 1;
+class Attempts {
+  constructor() {}
 
-				if (filter !== 'latest' && filter !== 'top') {
-					return new Response('Invalid filter', { status: 400, headers: responseHeaders });
-				}
+  async addAttempt(count: number) {
+    await db.query('INSERT INTO attempt (count) VALUES ($1)', [count]);
+  }
 
-				const query =
-					filter === 'latest'
-						? env.DB.prepare('SELECT * FROM attempt ORDER BY created_at DESC LIMIT ?1 OFFSET ?2').bind(PAGE_SIZE, (page - 1) * PAGE_SIZE)
-						: env.DB.prepare('SELECT * FROM attempt ORDER BY max_count DESC, created_at DESC LIMIT ?1 OFFSET ?2').bind(
-								PAGE_SIZE,
-								(page - 1) * PAGE_SIZE
-						  );
+  async getCount() {
+    const numberOfRowsResult = await db.query(
+      'SELECT COUNT(*) AS count FROM attempt'
+    );
 
-				const attempts = await query.all();
+    return Number(numberOfRowsResult.rows[0].count);
+  }
 
-				if (!attempts.success) {
-					return new Response('Internal server error', { status: 500, headers: responseHeaders });
-				}
+  async getRows({
+    limit,
+    offset,
+    filter,
+  }: {
+    offset: number;
+    limit: number;
+    filter: 'latest' | 'top';
+  }) {
+    if (filter === 'latest') {
+      const query = await db.query(
+        'SELECT * FROM attempt ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+        [limit, offset]
+      );
 
-				const numberOfRowsResult = await env.DB.prepare('SELECT COUNT(*) FROM attempt').first();
+      return query.rows;
+    }
 
-				if (!numberOfRowsResult) {
-					return new Response('Internal server error', { status: 500, headers: responseHeaders });
-				}
+    const query = await db.query(
+      'SELECT * FROM attempt ORDER BY count DESC, created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
 
-				const numberOfRows = numberOfRowsResult['COUNT(*)'];
+    return query.rows;
+  }
+}
 
-				if (typeof numberOfRows !== 'number') {
-					return new Response('Internal server error', { status: 500, headers: responseHeaders });
-				}
+class Highscore {
+  constructor() {}
+  async getHighScore() {
+    // get the current score from redis and check with the db for the highest score
 
-				const hasNextPage = numberOfRows > page * PAGE_SIZE;
+    return 1;
+  }
+  async setHighScore(value: number) {
+    return;
+  }
+}
 
-				return new Response(JSON.stringify({ data: attempts.results, success: true, hasNextPage }), {
-					status: 200,
-					headers: responseHeaders,
-				});
-			}
-			default: {
-				return new Response('Not Found', { status: 404 });
-			}
-		}
-	},
-} satisfies ExportedHandler<Env>;
+const counter = new Counter();
+const highscore = new Highscore();
+
+let connections: WebSocket[] = [];
+
+app.ws('/v1/websocket', (ws) => {
+  console.log('Connected!');
+  connections.push(ws);
+
+  connections.forEach((connection) => {
+    try {
+      connection.send(
+        JSON.stringify({ type: 'user-count', value: connections.length })
+      );
+    } catch (error) {
+      console.error('Error sending message to client', error);
+    }
+  });
+
+  ws.on('error', console.error);
+
+  ws.on('message', async function message(data) {
+    try {
+      const parsedData = JSON.parse(data.toString());
+
+      switch (parsedData.type) {
+        case 'initial': {
+          const highScore = 1;
+          const value = await counter.getCounterValue();
+          const userCount = connections.length;
+
+          try {
+            ws.send(
+              JSON.stringify({ value, type: 'initial', highScore, userCount })
+            );
+          } catch (error) {
+            console.error('Error sending message to client', error);
+          }
+
+          return;
+        }
+        case 'update-count': {
+          const currentCount = await counter.getCounterValue();
+
+          if (currentCount + 1 !== parsedData.value) {
+            await counter.setCounterValue(1);
+
+            await new Attempts().addAttempt(currentCount);
+
+            connections.forEach((connection) => {
+              try {
+                connection.send(
+                  JSON.stringify({ type: 'failed', value: parsedData.value })
+                );
+              } catch (error) {
+                console.error('Error sending message to client', error);
+              }
+            });
+
+            return;
+          }
+
+          await counter.setCounterValue(parsedData.value);
+
+          connections.forEach((connection) => {
+            try {
+              connection.send(
+                JSON.stringify({
+                  value: parsedData.value,
+                  type: 'count-updated',
+                })
+              );
+            } catch (error) {
+              console.error('Error sending message to client', error);
+            }
+          });
+
+          const highScore = await highscore.getHighScore();
+
+          if (parsedData.value > highScore) {
+            await highscore.setHighScore(parsedData.value);
+          }
+
+          return;
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
+  ws.on('close', (cls) => {
+    connections = connections.filter((connection) => connection !== ws);
+
+    connections.forEach((connection) => {
+      try {
+        connection.send(
+          JSON.stringify({ type: 'user-count', value: connections.length })
+        );
+      } catch (error) {
+        console.error('Error sending message to client', error);
+      }
+    });
+  });
+});
+
+app.listen(config.port, () => {
+  console.log(`Server started on port ${config.port}`);
+});
