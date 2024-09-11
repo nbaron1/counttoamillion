@@ -9,8 +9,45 @@ import { Client } from 'pg';
 
 const app = expressWs(express()).app;
 app.use(cors({ origin: [config.frontendHost] }));
-
+app.use(express.json());
 const PAGE_SIZE = 50;
+
+app.post('/v1/verify', async (req, res) => {
+  try {
+    if (!req.body.token) {
+      res.status(400).send({ error: 'Missing token', success: false });
+      return;
+    }
+
+    const url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
+    try {
+      const result = await fetch(url, {
+        body: JSON.stringify({
+          secret: config.turnstileSecret,
+          response: req.body.token,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      });
+
+      const data = await result.json();
+
+      if (!data.success) {
+        res.status(401).send({ error: 'Invalid token', success: false });
+        return;
+      }
+
+      res.status(200).send({ success: true });
+    } catch (error) {
+      res.status(401).send({ error: 'Invalid token', success: false });
+    }
+  } catch (error) {
+    res.status(500).send({ error: 'Internal server error', success: false });
+  }
+});
 
 app.get('/v1/attempts', async (req, res) => {
   const filter = req.query.filter ?? 'latest';
