@@ -369,8 +369,13 @@ const fetchMessages = async (): Promise<MessagesType> => {
   }
 };
 
-function Messages({ messages }: { messages: MessagesType }) {
-  const messagesRef = useRef<HTMLDivElement>(null);
+function Messages({
+  messages,
+  messagesRef,
+}: {
+  messages: MessagesType;
+  messagesRef: React.RefObject<HTMLDivElement>;
+}) {
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   const hasLoaded = useRef(false);
@@ -455,6 +460,7 @@ const MobileDialogContent = forwardRef<
   const [usernameState, setUsernameState] = useState<
     'loading' | 'exists' | 'doesnt-exist'
   >('loading');
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const usernameItem = localStorage.getItem('username');
@@ -529,6 +535,14 @@ const MobileDialogContent = forwardRef<
 
     setMessage('');
 
+    // Scroll after the scrollHeight has been updated to include the new message
+    setTimeout(() => {
+      messagesRef.current?.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 250);
+
     onSendMessage({ author: username, message });
   };
 
@@ -558,7 +572,7 @@ const MobileDialogContent = forwardRef<
           Change username
         </button>
       </div>
-      <Messages messages={messages} />
+      <Messages messagesRef={messagesRef} messages={messages} />
       <div className='flex flex-col gap-2'>
         <textarea
           value={message}
@@ -612,6 +626,7 @@ const DesktopPopoverContent = forwardRef<
   const [usernameState, setUsernameState] = useState<
     'loading' | 'exists' | 'doesnt-exist'
   >('loading');
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const usernameItem = localStorage.getItem('username');
@@ -688,6 +703,14 @@ const DesktopPopoverContent = forwardRef<
 
     setMessage('');
 
+    // Scroll after the scrollHeight has been updated to include the new message
+    setTimeout(() => {
+      messagesRef.current?.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 250);
+
     onSendMessage({ author: username, message });
   };
 
@@ -720,7 +743,7 @@ const DesktopPopoverContent = forwardRef<
           Change username
         </button>
       </div>
-      <Messages messages={messages} />
+      <Messages messagesRef={messagesRef} messages={messages} />
       <div className='flex flex-col gap-2'>
         <textarea
           value={message}
@@ -752,7 +775,7 @@ function DesktopChatPopover({
 }) {
   return (
     <Popover.Root>
-      <Popover.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-8 -translate-y-full'>
+      <Popover.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-0 -translate-y-full'>
         <ChatIcon />
       </Popover.Trigger>
       <Popover.Portal>
