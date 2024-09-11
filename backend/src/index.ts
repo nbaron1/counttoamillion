@@ -8,9 +8,7 @@ import cors from 'cors';
 import { Client } from 'pg';
 
 const app = expressWs(express()).app;
-app.use(
-  cors({ origin: ['http://localhost:3000', 'https://countinorder.com'] })
-);
+app.use(cors({ origin: [config.frontendHost] }));
 
 const PAGE_SIZE = 50;
 
