@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   useCallback,
   useEffect,
   useMemo,
@@ -11,6 +12,26 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import './dialog.css';
 import './hide-scrollbar.css';
+
+function ChatIcon() {
+  return (
+    <svg
+      width='24'
+      height='24'
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        d='M6.09436 11.2288C6.03221 10.8282 5.99996 10.4179 5.99996 10C5.99996 5.58172 9.60525 2 14.0526 2C18.4999 2 22.1052 5.58172 22.1052 10C22.1052 10.9981 21.9213 11.9535 21.5852 12.8345C21.5154 13.0175 21.4804 13.109 21.4646 13.1804C21.4489 13.2512 21.4428 13.301 21.4411 13.3735C21.4394 13.4466 21.4493 13.5272 21.4692 13.6883L21.8717 16.9585C21.9153 17.3125 21.9371 17.4895 21.8782 17.6182C21.8266 17.731 21.735 17.8205 21.6211 17.8695C21.4911 17.9254 21.3146 17.8995 20.9617 17.8478L17.7765 17.3809C17.6101 17.3565 17.527 17.3443 17.4512 17.3448C17.3763 17.3452 17.3245 17.3507 17.2511 17.3661C17.177 17.3817 17.0823 17.4172 16.893 17.4881C16.0097 17.819 15.0524 18 14.0526 18C13.6344 18 13.2237 17.9683 12.8227 17.9073M7.63158 22C10.5965 22 13 19.5376 13 16.5C13 13.4624 10.5965 11 7.63158 11C4.66668 11 2.26316 13.4624 2.26316 16.5C2.26316 17.1106 2.36028 17.6979 2.53955 18.2467C2.61533 18.4787 2.65322 18.5947 2.66566 18.6739C2.67864 18.7567 2.68091 18.8031 2.67608 18.8867C2.67145 18.9668 2.65141 19.0573 2.61134 19.2383L2 22L4.9948 21.591C5.15827 21.5687 5.24 21.5575 5.31137 21.558C5.38652 21.5585 5.42641 21.5626 5.50011 21.5773C5.5701 21.5912 5.67416 21.6279 5.88227 21.7014C6.43059 21.8949 7.01911 22 7.63158 22Z'
+        stroke='#D6D3D1'
+        strokeWidth='2'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+      />
+    </svg>
+  );
+}
 
 function NumberElement({
   number,
@@ -57,6 +78,25 @@ const BACKEND_HOST = import.meta.env.VITE_BACKEND_HOST;
 if (!BACKEND_HOST) {
   throw new Error('VITE_BACKEND_HOST not found');
 }
+
+// function CloseIcon() {
+//   return (
+//     <svg
+//       width='20'
+//       height='20'
+//       viewBox='0 0 20 20'
+//       fill='none'
+//       xmlns='http://www.w3.org/2000/svg'
+//     >
+//       <path
+//         fill-rule='evenodd'
+//         clip-rule='evenodd'
+//         d='M4.41107 4.41009C4.73651 4.08466 5.26414 4.08466 5.58958 4.41009L10.0003 8.82084L14.4111 4.41009C14.7365 4.08466 15.2641 4.08466 15.5896 4.41009C15.915 4.73553 15.915 5.26317 15.5896 5.5886L11.1788 9.99935L15.5896 14.4101C15.915 14.7355 15.915 15.2632 15.5896 15.5886C15.2641 15.914 14.7365 15.914 14.4111 15.5886L10.0003 11.1779L5.58958 15.5886C5.26414 15.914 4.73651 15.914 4.41107 15.5886C4.08563 15.2632 4.08563 14.7355 4.41107 14.4101L8.82182 9.99935L4.41107 5.5886C4.08563 5.26317 4.08563 4.73553 4.41107 4.41009Z'
+//         fill='white'
+//       />
+//     </svg>
+//   );
+// }
 
 const useAttempts = ({
   filter,
@@ -267,6 +307,293 @@ function CloseIcon() {
   );
 }
 
+function Message({ author, message }: { message: string; author: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div
+      className='flex flex-col'
+      onClick={() => setIsExpanded((prev) => !prev)}
+    >
+      <p
+        className={`text-gray-100 break-words ${
+          isExpanded ? 'line-clamp-2' : ''
+        }`}
+      >
+        {message}
+      </p>
+      <p className='text-gray-500'>{author}</p>
+    </div>
+  );
+}
+
+type MessageType = {
+  id: number;
+  message: string;
+  createdAt: string;
+  author: string;
+};
+
+type MessagesType = MessageType[] | null;
+
+const fetchMessages = async (): Promise<MessagesType> => {
+  try {
+    const result = await fetch(`${BACKEND_HOST}/v1/messages?limit=50`);
+
+    if (!result.ok) {
+      throw new Error('Failed to fetch messages');
+    }
+
+    const data = (await result.json()) as { data: MessagesType };
+
+    return data.data;
+  } catch {
+    const waitOneSecond = new Promise((resolve) => {
+      setTimeout(() => {
+        resolve([]);
+      }, 1000);
+    });
+
+    await waitOneSecond;
+
+    return fetchMessages();
+  }
+};
+
+function Messages({ messages }: { messages: MessagesType }) {
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const hasLoaded = useRef(false);
+
+  // only scroll if the user is at the bottom
+
+  useEffect(() => {
+    if (!hasLoaded.current) {
+      messagesRef.current?.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: 'instant',
+      });
+      // messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      hasLoaded.current = true;
+      return;
+    }
+
+    if (!isAtBottom || !messagesRef.current) {
+      return;
+    }
+
+    messagesRef.current.scrollTo({
+      top: messagesRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [isAtBottom, messages]);
+
+  const handleScroll = useCallback(() => {
+    if (!messagesRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
+
+    if (scrollTop + clientHeight >= scrollHeight) {
+      setIsAtBottom(true);
+
+      return;
+    }
+
+    setIsAtBottom(false);
+  }, []);
+
+  useEffect(() => {
+    messagesRef.current?.addEventListener('scroll', handleScroll);
+
+    return () => {
+      messagesRef.current?.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
+
+  if (!messages) {
+    return (
+      <div className='relative flex-1'>
+        <div className='absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2'>
+          <Spinner />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className='flex flex-col flex-1 gap-1 overflow-y-scroll'
+      ref={messagesRef}
+    >
+      {messages.map((message) => (
+        <Message
+          author={message.author}
+          message={message.message}
+          key={message.id}
+        />
+      ))}
+    </div>
+  );
+}
+
+const ChatPopoverContent = forwardRef<
+  HTMLDivElement,
+  { onSendMessage: SendMessageEvent; messages: MessagesType }
+>(function ChatPopoverContent({ onSendMessage, messages }, ref) {
+  const [username, setUsername] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [usernameState, setUsernameState] = useState<
+    'loading' | 'exists' | 'doesnt-exist'
+  >('loading');
+
+  useEffect(() => {
+    const usernameItem = localStorage.getItem('username');
+
+    if (usernameItem) {
+      setUsername(usernameItem);
+      setUsernameState('exists');
+    } else {
+      setUsernameState('doesnt-exist');
+    }
+  }, []);
+
+  if (usernameState === 'loading') {
+    return <p>Loading...</p>;
+  }
+
+  const handleSaveUsername = () => {
+    if (username.length === 0) {
+      return;
+    }
+
+    setUsernameState('exists');
+    localStorage.setItem('username', username);
+  };
+
+  const handleChangeName = () => {
+    setUsernameState('doesnt-exist');
+    localStorage.removeItem('username');
+    setUsername('');
+  };
+
+  if (usernameState === 'doesnt-exist') {
+    return (
+      <Dialog.Content
+        ref={ref}
+        className='flex flex-col gap-2 DialogContent h-[95vh] fixed top-1/2 -translate-x-1/2 left-1/2 -translate-y-1/2 rounded-2xl w-[90vw] bg-gray-800 border border-gray-700 px-6 py-6'
+      >
+        <div className='flex items-center justify-between'>
+          <Dialog.Title className='text-xl'>Chat</Dialog.Title>
+          <Dialog.Close>
+            <CloseIcon />
+          </Dialog.Close>
+        </div>
+        <div className='absolute top-1/2 -translate-y-full left-6 right-6 flex flex-col gap-5'>
+          <p className='text-2xl text-center'>
+            Write a username to use the chat
+          </p>
+          <div className='flex flex-col gap-2'>
+            <input
+              value={username ?? ''}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder='Write a username'
+              className='w-full py-4 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none pl-4 pr-2 '
+            />
+            <button
+              onClick={handleSaveUsername}
+              className='w-full py-3 bg-gray-700 border border-gray-600 rounded-lg'
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </Dialog.Content>
+    );
+  }
+
+  const handleSendMessage = () => {
+    const username = localStorage.getItem('username');
+
+    // todo: add sentry error handling
+    if (!username) {
+      return;
+    }
+
+    setMessage('');
+
+    onSendMessage({ author: username, message });
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    handleSendMessage();
+  };
+
+  return (
+    <Dialog.Content
+      ref={ref}
+      className='flex flex-col gap-3 DialogContent h-[95vh] fixed top-1/2 -translate-x-1/2 left-1/2 -translate-y-1/2 rounded-2xl w-[90vw] bg-gray-800 border border-gray-700 px-6 py-6'
+    >
+      <div className='flex flex-col mb-2'>
+        <div className='flex items-center justify-between'>
+          <Dialog.Title className='text-xl'>Chat</Dialog.Title>
+          <Dialog.Close>
+            <CloseIcon />
+          </Dialog.Close>
+        </div>
+        <button
+          className='text-gray-500 self-start text-center'
+          onClick={handleChangeName}
+        >
+          Change username
+        </button>
+      </div>
+      <Messages messages={messages} />
+      <div className='flex flex-col gap-2'>
+        <textarea
+          value={message}
+          onKeyDown={handleKeyDown}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder='Write a message'
+          rows={1}
+          className='w-full py-4 overflow-y-auto rounded-lg h-auto resize-none border border-gray-600 bg-gray-800 text-white outline-none pl-4 pr-2 '
+        />
+        <div className='flex flex-col gap-1'>
+          <button
+            onClick={handleSendMessage}
+            className='w-full py-3 bg-gray-700 border border-gray-600 rounded-lg'
+          >
+            Send message
+          </button>
+        </div>
+      </div>
+    </Dialog.Content>
+  );
+});
+
+function ChatPopover({
+  onSendMessage,
+  messages,
+}: {
+  onSendMessage: SendMessageEvent;
+  messages: MessagesType;
+}) {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-8 -translate-y-full'>
+        <ChatIcon />
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
+        <ChatPopoverContent onSendMessage={onSendMessage} messages={messages} />
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function Game({
   failedNumber,
   highscore,
@@ -275,6 +602,8 @@ function Game({
   onSubmit,
   scope,
   keyValue,
+  onSendMessage,
+  messages,
 }: {
   failedNumber: null | number;
   highscore: number;
@@ -283,6 +612,8 @@ function Game({
   onSubmit: (value: number) => void;
   scope: AnimationScope;
   keyValue: number;
+  onSendMessage: SendMessageEvent;
+  messages: MessagesType;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -331,6 +662,7 @@ function Game({
       >
         buy me a coffee
       </a>
+      <ChatPopover onSendMessage={onSendMessage} messages={messages} />
       <a
         target='_blank'
         className='hidden text-gray-500 underline sm:block fixed bottom-5 left-5'
@@ -340,7 +672,7 @@ function Game({
       </a>
       <div className='fixed sm:right-6 top-5 sm:justify-between left-5 text-lg text-gray-50 flex'>
         <div className='flex flex-col sm:flex-row sm:gap-5'>
-          <p>High score: {highscore}</p>
+          <p>Closest attempt: {highscore}</p>
           <PreviousAttemptsDialog />
         </div>
         <div className='hidden sm:flex items-center gap-3'>
@@ -379,14 +711,14 @@ function Game({
             <FailedNumberElement number={failedNumber} />
           )}
         </div>
-        <div className='fixed bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-3'>
+        <div className='fixed bottom-4 sm:bottom-6 left-5 right-5 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex flex-col gap-3'>
           <div className='sm:hidden flex items-center gap-2'>
             <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
             <p className='text-gray-50'>
               {userCount} {userCount === 1 ? 'user' : 'users'} online
             </p>
           </div>
-          <div className='border max-w-[95vw] min-[425px]:w-80 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
+          <div className='border max-w-[95vw] sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
             <input
               placeholder='Write the next number'
               autoFocus
@@ -541,11 +873,30 @@ function Spinner() {
   );
 }
 
+type SendMessageEvent = (data: { message: string; author: string }) => void;
+
 function App() {
   const websocketRef = useRef<WebSocket | null>(null);
   const [state, dispatch] = useReducer(reducer, initialState);
   const [key, rerender] = useState(Math.random());
   const [scope, animate] = useAnimate();
+
+  const [messages, setMessages] = useState<MessagesType>(null);
+  const hasLoaded = useRef(false);
+
+  useEffect(() => {
+    if (hasLoaded.current) return;
+
+    hasLoaded.current = true;
+
+    try {
+      fetchMessages().then((data) => {
+        setMessages(data);
+      });
+    } catch (error) {
+      console.error('Error fetching messages', error);
+    }
+  }, []);
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
@@ -573,6 +924,16 @@ function App() {
             dispatch({
               type: 'update-count',
               value: parsedData.value,
+            });
+
+            break;
+          }
+          case 'message': {
+            console.log('Received message', parsedData);
+            setMessages((prev) => {
+              console.log(parsedData);
+              if (!prev) return [parsedData];
+              return [...prev, parsedData];
             });
 
             break;
@@ -681,6 +1042,33 @@ function App() {
     websocketRef.current.send(JSON.stringify({ type: 'update-count', value }));
   };
 
+  const handleSendMessage = ({
+    message,
+    author,
+  }: {
+    message: string;
+    author: string;
+  }) => {
+    if (!websocketRef.current || !messages) {
+      return;
+    }
+
+    console.log('Sending message', { message, author });
+
+    const newOptimisticMessage = {
+      author,
+      message,
+      createdAt: new Date().toISOString(),
+      id: Math.random(),
+    };
+
+    setMessages(() => [...messages, newOptimisticMessage]);
+
+    websocketRef.current.send(
+      JSON.stringify({ type: 'message', message, author })
+    );
+  };
+
   if (state.isLoading) {
     return (
       <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
@@ -695,9 +1083,11 @@ function App() {
       failedNumber={state.failedNumber}
       highscore={state.highscore}
       userCount={state.userCount}
+      onSendMessage={handleSendMessage}
       keyValue={key}
       onSubmit={handleSubmit}
       scope={scope}
+      messages={messages}
     />
   );
 }

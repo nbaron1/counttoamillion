@@ -5,6 +5,7 @@ import { type WebSocket } from 'ws';
 import { redis } from './redis';
 import { db } from './db';
 import cors from 'cors';
+import { Client } from 'pg';
 
 const app = expressWs(express()).app;
 app.use(
@@ -24,7 +25,7 @@ app.get('/v1/attempts', async (req, res) => {
   }
 
   try {
-    const attempts = new Attempts();
+    const attempts = new Attempts(db);
 
     const rows = await attempts.getRows({
       limit: PAGE_SIZE,
@@ -32,13 +33,27 @@ app.get('/v1/attempts', async (req, res) => {
       filter,
     });
 
-    const numberOfRows = await new Attempts().getCount();
+    const numberOfRows = await new Attempts(db).getCount();
 
     const hasNextPage = numberOfRows > page * PAGE_SIZE;
 
     res.status(200).send({ data: rows, success: true, hasNextPage });
   } catch (error) {
-    res.status(500).send('Internal server error');
+    res.status(500).send({ error: 'Internal server error', success: false });
+  }
+});
+
+app.get('/v1/messages', async (req, res) => {
+  try {
+    const messages = new Messages(db);
+
+    const limit = req.query.limit ? Number(req.query.limit) : 10;
+
+    const rows = await messages.getLatestMessages(limit);
+
+    res.status(200).send({ data: rows, success: true });
+  } catch (error) {
+    res.status(500).send({ error: 'Internal server error', success: false });
   }
 });
 
@@ -54,7 +69,7 @@ class Counter {
 }
 
 class Attempts {
-  constructor() {}
+  constructor(private readonly db: Client) {}
 
   async addAttempt(count: number) {
     await db.query('INSERT INTO attempt (count) VALUES ($1)', [count]);
@@ -96,7 +111,6 @@ class Attempts {
 }
 
 class Highscore {
-  constructor() {}
   async getHighScore() {
     // get the current score from redis and check with the db for the highest score
 
@@ -104,6 +118,78 @@ class Highscore {
   }
   async setHighScore(value: number) {
     return;
+  }
+}
+
+class Messages {
+  constructor(private readonly db: Client) {}
+
+  async addMessage({ message, author }: { message: string; author: string }) {
+    const result = await db.query(
+      'INSERT INTO message (message, author) VALUES ($1, $2) RETURNING *',
+      [message, author]
+    );
+
+    return result.rows[0];
+  }
+
+  async getLatestMessages(count: number) {
+    const result = await db.query(
+      'SELECT * FROM message ORDER BY created_at DESC LIMIT $1',
+      [count]
+    );
+
+    return result.rows;
+  }
+}
+
+class Message {
+  message: string;
+  author: string;
+  db: Client;
+
+  constructor({
+    author,
+    db,
+    message,
+  }: {
+    db: Client;
+    message: string;
+    author: string;
+  }) {
+    this.message = message;
+    this.author = author;
+    this.db = db;
+  }
+
+  async isTextHarmful(text: string) {
+    const result = await fetch('https://api.openai.com/v1/moderations', {
+      method: 'POST',
+      body: JSON.stringify({
+        input: text,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.openaiKey}`,
+      },
+    });
+
+    const data = await result.json();
+    return data.results[0].flagged;
+  }
+
+  async isHarmful(): Promise<boolean | null> {
+    try {
+      const [isMessageHarmful, isAuthorNameHarmful] = await Promise.all([
+        this.isTextHarmful(this.message),
+        this.isTextHarmful(this.author),
+      ]);
+
+      return isMessageHarmful || isAuthorNameHarmful;
+    } catch (error) {
+      console.error('Error checking message', error);
+      return null;
+    }
   }
 }
 
@@ -154,7 +240,7 @@ app.ws('/v1/websocket', (ws) => {
           if (currentCount + 1 !== parsedData.value) {
             await counter.setCounterValue(1);
 
-            await new Attempts().addAttempt(currentCount);
+            await new Attempts(db).addAttempt(currentCount);
 
             connections.forEach((connection) => {
               try {
@@ -191,6 +277,43 @@ app.ws('/v1/websocket', (ws) => {
           }
 
           return;
+        }
+        case 'message': {
+          const message = parsedData.message;
+          const author = parsedData.author;
+
+          const messageInstance = new Message({
+            db,
+            message,
+            author,
+          });
+
+          const isHarmful = await messageInstance.isHarmful();
+          console.log({ isHarmful });
+          if (isHarmful === null || isHarmful === true) {
+            return;
+          }
+
+          const newMessage = await new Messages(db).addMessage({
+            message,
+            author,
+          });
+
+          connections.forEach((connection) => {
+            // Don't send the message back to the client that sent it
+            if (connection === ws) return;
+
+            try {
+              connection.send(
+                JSON.stringify({
+                  type: 'message',
+                  ...newMessage,
+                })
+              );
+            } catch (error) {
+              console.error('Error sending message to client', error);
+            }
+          });
         }
       }
     } catch (error) {
