@@ -932,7 +932,7 @@ function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
 
   if (!state.verified) {
     return (
-      <div className='flex flex-col self-center gap-2'>
+      <div className='flex flex-col self-center gap-2 w-full'>
         <p className='text-center text-gray-400'>
           Verify you're a human to continue
         </p>
@@ -941,7 +941,7 @@ function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
             size: 'flexible',
             theme: 'dark',
           }}
-          className='w-full  h-auto max-w-[95vw] sm:!w-96'
+          className='w-full  h-auto max-w-[95vw] self-center sm:!w-96'
           siteKey={import.meta.env.VITE_CF_TURNSTILE_KEY}
           onSuccess={handleSuccess}
         />
