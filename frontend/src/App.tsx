@@ -13,6 +13,7 @@ import * as Popover from '@radix-ui/react-popover';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import './dialog.css';
 import './hide-scrollbar.css';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 function ChatIcon() {
   return (
@@ -419,7 +420,7 @@ function Messages({
       top: messagesRef.current.scrollHeight,
       behavior: 'smooth',
     });
-  }, [isAtBottom, messages]);
+  }, [isAtBottom, messages, messagesRef]);
 
   const handleScroll = useCallback(() => {
     if (!messagesRef.current) return;
@@ -808,6 +809,158 @@ function DesktopChatPopover({
   );
 }
 
+type VerificationState = {
+  verified: boolean;
+  submissionsSinceVerification: number;
+};
+
+type VerificationAction = 'verify' | 'verification-required' | 'submission';
+
+const verificationReducer = (
+  state: VerificationState,
+  action: VerificationAction
+) => {
+  switch (action) {
+    case 'verification-required': {
+      return { verified: false, submissionsSinceVerification: 0 };
+
+      break;
+    }
+    case 'verify': {
+      return {
+        verified: true,
+        submissionsSinceVerification: 0,
+      };
+
+      break;
+    }
+    case 'submission': {
+      if (state.submissionsSinceVerification + 1 === 10) {
+        return { verified: false, submissionsSinceVerification: 0 };
+      }
+
+      return {
+        verified: state.verified,
+        submissionsSinceVerification: state.submissionsSinceVerification + 1,
+      };
+    }
+  }
+};
+
+const initialVerificationState: VerificationState = {
+  submissionsSinceVerification: 0,
+  verified: false,
+};
+
+function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [state, dispatch] = useReducer(
+    verificationReducer,
+    initialVerificationState
+  );
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSubmit = () => {
+    const inputNumberValue = Number.parseInt(inputValue, 10);
+
+    // TODO: Error handling
+    if (Number.isNaN(inputNumberValue)) {
+      console.error('Input is not a number', { input: inputValue });
+      return;
+    }
+
+    const isAnInteger = Number.isInteger(inputNumberValue);
+
+    // TODO: Error handling
+    if (!isAnInteger) {
+      console.error('Input is not an integer', { input: inputValue });
+      return;
+    }
+
+    if (state.submissionsSinceVerification === 0) {
+      const timeout = setTimeout(() => {
+        dispatch('verification-required');
+      }, 120 * 1000);
+      timeoutRef.current = timeout;
+    }
+
+    if (state.submissionsSinceVerification === 9) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      dispatch('verification-required');
+    }
+
+    onSubmit(inputNumberValue);
+    setInputValue('');
+    inputRef.current?.focus();
+    dispatch('submission');
+  };
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
+    event
+  ) => {
+    if (event.key === 'Enter') {
+      handleSubmit();
+    }
+  };
+
+  if (!state.verified) {
+    return (
+      <div className='flex flex-col self-center gap-2'>
+        <p className='text-center text-gray-400'>
+          Verify you're a human to continue
+        </p>
+        <Turnstile
+          options={{ size: 'flexible', theme: 'dark' }}
+          className='w-full  h-auto max-w-[95vw] sm:!w-96'
+          siteKey={import.meta.env.VITE_CF_TURNSTILE_KEY}
+          onSuccess={() => {
+            setTimeout(() => {
+              dispatch('verify');
+            }, 2500);
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className='border self-center max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
+      <input
+        placeholder='Write the next number'
+        autoFocus
+        value={inputValue}
+        onKeyDown={handleKeyDown}
+        className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
+        onChange={(event) => setInputValue(event.target.value)}
+      />
+      <button
+        type='button'
+        className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
+        onClick={handleSubmit}
+      >
+        <svg
+          width='24'
+          height='24'
+          viewBox='0 0 24 24'
+          fill='none'
+          xmlns='http://www.w3.org/2000/svg'
+        >
+          <path
+            fillRule='evenodd'
+            clipRule='evenodd'
+            d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
+            fill='#FAFAF9'
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 function Game({
   failedNumber,
   highscore,
@@ -829,42 +982,9 @@ function Game({
   onSendMessage: SendMessageEvent;
   messages: MessagesType;
 }) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
   const highestNumber = useMemo(() => Math.max(...elements), [elements]);
-  const [inputValue, setInputValue] = useState('');
 
   const elementsSorted = Array.from(elements).sort((a, b) => a - b);
-
-  const handleSubmit = () => {
-    const inputNumberValue = Number.parseInt(inputValue, 10);
-
-    // TODO: Error handling
-    if (Number.isNaN(inputNumberValue)) {
-      console.error('Input is not a number', { input: inputValue });
-      return;
-    }
-
-    const isAnInteger = Number.isInteger(inputNumberValue);
-
-    // TODO: Error handling
-    if (!isAnInteger) {
-      console.error('Input is not an integer', { input: inputValue });
-      return;
-    }
-
-    onSubmit(inputNumberValue);
-    setInputValue('');
-    inputRef.current?.focus();
-  };
-
-  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
-    event
-  ) => {
-    if (event.key === 'Enter') {
-      handleSubmit();
-    }
-  };
 
   return (
     <div ref={scope}>
@@ -903,15 +1023,6 @@ function Game({
         </div>
       </div>
       <div className='flex items-center gap-5'>
-        {/* <Turnstile
-          id='turnstile-1'
-          options={{ size: 'normal', theme: 'light' }}
-          ref={refTurnstile}
-          className='rounded-md'
-          siteKey='0x4AAAAAAALvq89KRwrAjqSU'
-          onSuccess={() => console.log('success')}
-        /> */}
-
         {/* TODO: fix centering */}
         <div
           className='fixed top-1/2 sm:-translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0 -translate-y-full'
@@ -929,6 +1040,7 @@ function Game({
           )}
         </div>
         <div className='fixed bottom-4 sm:bottom-6 left-5 right-5 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex flex-col gap-3'>
+          <div className=''></div>
           <div className='flex items-center justify-between'>
             <div className='sm:hidden flex items-center gap-2 self-end'>
               <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
@@ -943,39 +1055,7 @@ function Game({
               />
             </div>
           </div>
-          <div className='flex flex-col items-center'>
-            <div className='border max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
-              <input
-                placeholder='Write the next number'
-                autoFocus
-                ref={inputRef}
-                value={inputValue}
-                onKeyDown={handleKeyDown}
-                className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
-                onChange={(event) => setInputValue(event.target.value)}
-              />
-              <button
-                type='button'
-                className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
-                onClick={handleSubmit}
-              >
-                <svg
-                  width='24'
-                  height='24'
-                  viewBox='0 0 24 24'
-                  fill='none'
-                  xmlns='http://www.w3.org/2000/svg'
-                >
-                  <path
-                    fillRule='evenodd'
-                    clipRule='evenodd'
-                    d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
-                    fill='#FAFAF9'
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <InputField onSubmit={onSubmit} />
           <p className='text-gray-500 text-center'>
             This website will shut down forever once we count to{' '}
             <span className='text-gray-50'>101</span> in order
