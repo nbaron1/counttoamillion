@@ -14,4 +14,5 @@ export const config = {
   port: process.env.PORT ? Number(process.env.PORT) : 5000,
   redisURL: throwIfMissing('REDIS_URL'),
   databaseURL: throwIfMissing('DATABASE_URL'),
+  openaiKey: throwIfMissing('OPENAI_API_KEY'),
 };
