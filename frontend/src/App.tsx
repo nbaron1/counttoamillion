@@ -434,7 +434,7 @@ function Messages({
     }
 
     setIsAtBottom(false);
-  }, []);
+  }, [messagesRef]);
 
   useEffect(() => {
     messagesRef.current?.addEventListener('scroll', handleScroll);
@@ -442,7 +442,7 @@ function Messages({
     return () => {
       messagesRef.current?.removeEventListener('scroll', handleScroll);
     };
-  }, [handleScroll]);
+  }, [handleScroll, messagesRef]);
 
   if (!messages) {
     return (
@@ -823,16 +823,12 @@ const verificationReducer = (
   switch (action) {
     case 'verification-required': {
       return { verified: false, submissionsSinceVerification: 0 };
-
-      break;
     }
     case 'verify': {
       return {
         verified: true,
         submissionsSinceVerification: 0,
       };
-
-      break;
     }
     case 'submission': {
       if (state.submissionsSinceVerification + 1 === 10) {
@@ -907,6 +903,33 @@ function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
     }
   };
 
+  const handleSuccess = async (token: string) => {
+    try {
+      const response = await fetch(`${BACKEND_HOST}/v1/verify`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify');
+      }
+
+      const data = await response.json();
+
+      if (!('success' in data) || !data.success) {
+        return;
+      }
+
+      dispatch('verify');
+    } catch (error) {
+      // todo: sentry error handling
+      console.error(error);
+    }
+  };
+
   if (!state.verified) {
     return (
       <div className='flex flex-col self-center gap-2'>
@@ -914,14 +937,13 @@ function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
           Verify you're a human to continue
         </p>
         <Turnstile
-          options={{ size: 'flexible', theme: 'dark' }}
+          options={{
+            size: 'flexible',
+            theme: 'dark',
+          }}
           className='w-full  h-auto max-w-[95vw] sm:!w-96'
           siteKey={import.meta.env.VITE_CF_TURNSTILE_KEY}
-          onSuccess={() => {
-            setTimeout(() => {
-              dispatch('verify');
-            }, 2500);
-          }}
+          onSuccess={handleSuccess}
         />
       </div>
     );

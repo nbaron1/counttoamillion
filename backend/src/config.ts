@@ -16,4 +16,5 @@ export const config = {
   databaseURL: throwIfMissing('DATABASE_URL'),
   openaiKey: throwIfMissing('OPENAI_API_KEY'),
   frontendHost: throwIfMissing('FRONTEND_HOST'),
+  turnstileSecret: throwIfMissing('CF_TURNSTILE_SECRET'),
 };
