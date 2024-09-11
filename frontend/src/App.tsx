@@ -107,8 +107,8 @@ const useAttempts = ({
   page: number;
 }) => {
   const [data, setData] = useState<
-    { id: number; created_at: string; count: number }[]
-  >([]);
+    { id: number; created_at: string; count: number }[] | null
+  >(null);
   const [hasNextPage, setHasNextPage] = useState(false);
 
   useEffect(() => {
@@ -195,6 +195,16 @@ function PreviousAttemptDialogPage({
   onLoadMore: () => void;
 }) {
   const { data, hasNextPage } = useAttempts({ page, filter });
+
+  if (data === null && !isLastPage) return null;
+
+  if (data === null) {
+    return (
+      <div className='mx-auto h-72'>
+        <div className='animate-spin w-10 h-10 border-4 border-solid border-gray-400 border-b-transparent rounded-[50%]'></div>
+      </div>
+    );
+  }
 
   return (
     <div className='flex flex-col gap-4'>
