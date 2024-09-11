@@ -624,7 +624,7 @@ function MobileChatDialog({
 }) {
   return (
     <Dialog.Root>
-      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-[68px]  -translate-y-full'>
+      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700'>
         <ChatIcon />
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -876,9 +876,7 @@ function Game({
       >
         buy me a coffee
       </a>
-      <div className='sm:hidden'>
-        <MobileChatDialog onSendMessage={onSendMessage} messages={messages} />
-      </div>
+
       <div className='hidden sm:block'>
         <DesktopChatPopover onSendMessage={onSendMessage} messages={messages} />
       </div>
@@ -931,11 +929,19 @@ function Game({
           )}
         </div>
         <div className='fixed bottom-4 sm:bottom-6 left-5 right-5 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex flex-col gap-3'>
-          <div className='sm:hidden flex items-center gap-2'>
-            <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
-            <p className='text-gray-50'>
-              {userCount} {userCount === 1 ? 'user' : 'users'} online
-            </p>
+          <div className='flex items-center justify-between'>
+            <div className='sm:hidden flex items-center gap-2 self-end'>
+              <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
+              <p className='text-gray-50'>
+                {userCount} {userCount === 1 ? 'user' : 'users'} online
+              </p>
+            </div>
+            <div className='sm:hidden'>
+              <MobileChatDialog
+                onSendMessage={onSendMessage}
+                messages={messages}
+              />
+            </div>
           </div>
           <div className='flex flex-col items-center'>
             <div className='border max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
