@@ -107,8 +107,8 @@ const useAttempts = ({
   page: number;
 }) => {
   const [data, setData] = useState<
-    { id: number; created_at: string; count: number }[]
-  >([]);
+    { id: number; created_at: string; count: number }[] | null
+  >(null);
   const [hasNextPage, setHasNextPage] = useState(false);
 
   useEffect(() => {
@@ -196,6 +196,16 @@ function PreviousAttemptDialogPage({
 }) {
   const { data, hasNextPage } = useAttempts({ page, filter });
 
+  if (data === null && !isLastPage) return null;
+
+  if (data === null) {
+    return (
+      <div className='mx-auto h-72'>
+        <div className='animate-spin w-10 h-10 border-4 border-solid border-gray-400 border-b-transparent rounded-[50%]'></div>
+      </div>
+    );
+  }
+
   return (
     <div className='flex flex-col gap-4'>
       {data.map((attempt) => (
@@ -204,7 +214,7 @@ function PreviousAttemptDialogPage({
 
       {isLastPage && hasNextPage && (
         <button
-          className='bg-gray-800 py-2 text-gray-50 border border-gray-700 rounded'
+          className='bg-gray-800 py-3 text-gray-50 border border-gray-700 rounded'
           type='button'
           onClick={onLoadMore}
         >
@@ -215,12 +225,22 @@ function PreviousAttemptDialogPage({
   );
 }
 
-function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
+function PreviousAttemptDialogContent({
+  type,
+  isEnabled,
+}: {
+  type: AttemptFilter;
+  isEnabled: boolean;
+}) {
   const [pages, setPages] = useState(1);
 
   return (
     <>
-      <div className='flex flex-col max-h-72 overflow-y-scroll gap-4'>
+      <div
+        className={`flex flex-col sm:max-h-96 overflow-y-scroll gap-4 ${
+          !isEnabled ? 'hidden' : ''
+        }`}
+      >
         {Array.from({ length: pages }).map((_, i) => (
           <PreviousAttemptDialogPage
             key={i}
@@ -231,7 +251,6 @@ function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
           />
         ))}
       </div>
-      <div id='load-more'></div>
     </>
   );
 }
@@ -256,7 +275,7 @@ function PreviousAttemptsDialog() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='DialogContent flex gap-8 sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+        <Dialog.Content className='DialogContent flex w-[90vw] sm:h-auto sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] h-[95vh] rounded-2xl gap-4 bg-gray-800 border border-gray-700 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <Dialog.Title className='text-gray-50 text-2xl'>
@@ -269,28 +288,27 @@ function PreviousAttemptsDialog() {
             <RadioGroup.Root
               value={type}
               onValueChange={handleValueChange}
-              className='bg-gray-900 border border-gray-800 rounded-lg px-2 flex py-[6px]'
+              className='bg-gray-800 border border-gray-700 rounded-lg px-2 flex py-[6px]'
             >
               <RadioGroup.Item
-                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded py-1'
+                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-700 rounded py-1'
                 value='top'
               >
                 Closest
               </RadioGroup.Item>
               <RadioGroup.Item
-                className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded'
+                className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-700 rounded'
                 value='latest'
               >
                 Latest
               </RadioGroup.Item>
             </RadioGroup.Root>
           </div>
-          <div style={{ display: type === 'latest' ? 'block' : 'none' }}>
-            <PreviousAttemptDialogContent type='latest' />
-          </div>
-          <div style={{ display: type === 'top' ? 'block' : 'none' }}>
-            <PreviousAttemptDialogContent type='top' />
-          </div>
+          <PreviousAttemptDialogContent
+            type='latest'
+            isEnabled={type === 'latest'}
+          />
+          <PreviousAttemptDialogContent type='top' isEnabled={type === 'top'} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -369,8 +387,13 @@ const fetchMessages = async (): Promise<MessagesType> => {
   }
 };
 
-function Messages({ messages }: { messages: MessagesType }) {
-  const messagesRef = useRef<HTMLDivElement>(null);
+function Messages({
+  messages,
+  messagesRef,
+}: {
+  messages: MessagesType;
+  messagesRef: React.RefObject<HTMLDivElement>;
+}) {
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   const hasLoaded = useRef(false);
@@ -455,6 +478,7 @@ const MobileDialogContent = forwardRef<
   const [usernameState, setUsernameState] = useState<
     'loading' | 'exists' | 'doesnt-exist'
   >('loading');
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const usernameItem = localStorage.getItem('username');
@@ -490,6 +514,7 @@ const MobileDialogContent = forwardRef<
     return (
       <Dialog.Content
         ref={ref}
+        aria-describedby={undefined}
         className='flex flex-col gap-2 DialogContent h-[95vh] fixed top-1/2 -translate-x-1/2 left-1/2 -translate-y-1/2 rounded-2xl w-[90vw] bg-gray-800 border border-gray-700 px-6 py-6'
       >
         <div className='flex items-center justify-between'>
@@ -498,9 +523,9 @@ const MobileDialogContent = forwardRef<
             <CloseIcon />
           </Dialog.Close>
         </div>
-        <div className='absolute top-1/2 -translate-y-full left-6 right-6 flex flex-col gap-5'>
+        <div className='absolute top-1/2 -translate-y-3/4 left-6 right-6 flex flex-col gap-5'>
           <p className='text-2xl text-center'>What should we call you?</p>
-          <div className='flex flex-col gap-2'>
+          <div className='flex flex-col gap-1'>
             <input
               value={username ?? ''}
               onChange={(event) => setUsername(event.target.value)}
@@ -529,6 +554,14 @@ const MobileDialogContent = forwardRef<
 
     setMessage('');
 
+    // Scroll after the scrollHeight has been updated to include the new message
+    setTimeout(() => {
+      messagesRef.current?.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 250);
+
     onSendMessage({ author: username, message });
   };
 
@@ -541,6 +574,7 @@ const MobileDialogContent = forwardRef<
 
   return (
     <Dialog.Content
+      aria-describedby={undefined}
       ref={ref}
       className='flex flex-col gap-3 DialogContent h-[95vh] fixed top-1/2 -translate-x-1/2 left-1/2 -translate-y-1/2 rounded-2xl w-[90vw] bg-gray-800 border border-gray-700 px-6 py-6'
     >
@@ -558,7 +592,7 @@ const MobileDialogContent = forwardRef<
           Change username
         </button>
       </div>
-      <Messages messages={messages} />
+      <Messages messagesRef={messagesRef} messages={messages} />
       <div className='flex flex-col gap-2'>
         <textarea
           value={message}
@@ -590,7 +624,7 @@ function MobileChatDialog({
 }) {
   return (
     <Dialog.Root>
-      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-8 -translate-y-full'>
+      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-[68px]  -translate-y-full'>
         <ChatIcon />
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -612,6 +646,7 @@ const DesktopPopoverContent = forwardRef<
   const [usernameState, setUsernameState] = useState<
     'loading' | 'exists' | 'doesnt-exist'
   >('loading');
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const usernameItem = localStorage.getItem('username');
@@ -652,14 +687,14 @@ const DesktopPopoverContent = forwardRef<
         className='py-6 px-6 w-96 rounded-2xl bg-gray-800 h-[600px] border border-gray-700'
       >
         <div className='flex items-center justify-between'>
-          <h3 className='text-xl'>Chat</h3>
+          <h3 className='text-xl'>Live chat</h3>
           <Popover.Close>
             <CloseIcon />
           </Popover.Close>
         </div>
         <div className='absolute top-1/2 -translate-y-1/2 left-6 right-6 flex flex-col gap-5'>
           <p className='text-2xl text-center'>What should we call you?</p>
-          <div className='flex flex-col gap-2'>
+          <div className='flex flex-col gap-1'>
             <input
               value={username ?? ''}
               onChange={(event) => setUsername(event.target.value)}
@@ -688,6 +723,14 @@ const DesktopPopoverContent = forwardRef<
 
     setMessage('');
 
+    // Scroll after the scrollHeight has been updated to include the new message
+    setTimeout(() => {
+      messagesRef.current?.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 250);
+
     onSendMessage({ author: username, message });
   };
 
@@ -708,7 +751,7 @@ const DesktopPopoverContent = forwardRef<
     >
       <div className='flex flex-col mb-2'>
         <div className='flex items-center justify-between'>
-          <h3 className='text-xl'>Chat</h3>
+          <h3 className='text-xl'>Live chat</h3>
           <Popover.Close>
             <CloseIcon />
           </Popover.Close>
@@ -720,7 +763,7 @@ const DesktopPopoverContent = forwardRef<
           Change username
         </button>
       </div>
-      <Messages messages={messages} />
+      <Messages messagesRef={messagesRef} messages={messages} />
       <div className='flex flex-col gap-2'>
         <textarea
           value={message}
@@ -752,7 +795,7 @@ function DesktopChatPopover({
 }) {
   return (
     <Popover.Root>
-      <Popover.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-8 -translate-y-full'>
+      <Popover.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-0 -translate-y-full'>
         <ChatIcon />
       </Popover.Trigger>
       <Popover.Portal>
@@ -873,7 +916,7 @@ function Game({
 
         {/* TODO: fix centering */}
         <div
-          className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'
+          className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0'
           key={keyValue}
         >
           {[...elementsSorted].map((number) => (
@@ -894,37 +937,43 @@ function Game({
               {userCount} {userCount === 1 ? 'user' : 'users'} online
             </p>
           </div>
-          <div className='border max-w-[95vw] sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
-            <input
-              placeholder='Write the next number'
-              autoFocus
-              ref={inputRef}
-              value={inputValue}
-              onKeyDown={handleKeyDown}
-              className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
-              onChange={(event) => setInputValue(event.target.value)}
-            />
-            <button
-              type='button'
-              className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
-              onClick={handleSubmit}
-            >
-              <svg
-                width='24'
-                height='24'
-                viewBox='0 0 24 24'
-                fill='none'
-                xmlns='http://www.w3.org/2000/svg'
+          <div className='flex flex-col items-center'>
+            <div className='border max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
+              <input
+                placeholder='Write the next number'
+                autoFocus
+                ref={inputRef}
+                value={inputValue}
+                onKeyDown={handleKeyDown}
+                className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
+                onChange={(event) => setInputValue(event.target.value)}
+              />
+              <button
+                type='button'
+                className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
+                onClick={handleSubmit}
               >
-                <path
-                  fillRule='evenodd'
-                  clipRule='evenodd'
-                  d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
-                  fill='#FAFAF9'
-                />
-              </svg>
-            </button>
+                <svg
+                  width='24'
+                  height='24'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  xmlns='http://www.w3.org/2000/svg'
+                >
+                  <path
+                    fillRule='evenodd'
+                    clipRule='evenodd'
+                    d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
+                    fill='#FAFAF9'
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
+          <p className='text-gray-500 text-center'>
+            This website will shut down forever once we count to{' '}
+            <span className='text-gray-50'>101</span> in order
+          </p>
         </div>
       </div>
     </div>
