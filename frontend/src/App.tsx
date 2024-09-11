@@ -225,12 +225,22 @@ function PreviousAttemptDialogPage({
   );
 }
 
-function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
+function PreviousAttemptDialogContent({
+  type,
+  isEnabled,
+}: {
+  type: AttemptFilter;
+  isEnabled: boolean;
+}) {
   const [pages, setPages] = useState(1);
 
   return (
     <>
-      <div className='flex flex-col max-h-72 overflow-y-scroll gap-4'>
+      <div
+        className={`flex flex-col sm:max-h-72 overflow-y-scroll gap-4 ${
+          !isEnabled ? 'hidden' : ''
+        }`}
+      >
         {Array.from({ length: pages }).map((_, i) => (
           <PreviousAttemptDialogPage
             key={i}
@@ -241,7 +251,6 @@ function PreviousAttemptDialogContent({ type }: { type: AttemptFilter }) {
           />
         ))}
       </div>
-      <div id='load-more'></div>
     </>
   );
 }
@@ -266,7 +275,7 @@ function PreviousAttemptsDialog() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='DialogContent flex gap-8 sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] rounded-2xl w-80 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+        <Dialog.Content className='DialogContent flex w-[90vw] sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] h-[95vh] rounded-2xl gap-4 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <Dialog.Title className='text-gray-50 text-2xl'>
@@ -295,12 +304,11 @@ function PreviousAttemptsDialog() {
               </RadioGroup.Item>
             </RadioGroup.Root>
           </div>
-          <div style={{ display: type === 'latest' ? 'block' : 'none' }}>
-            <PreviousAttemptDialogContent type='latest' />
-          </div>
-          <div style={{ display: type === 'top' ? 'block' : 'none' }}>
-            <PreviousAttemptDialogContent type='top' />
-          </div>
+          <PreviousAttemptDialogContent
+            type='latest'
+            isEnabled={type === 'latest'}
+          />
+          <PreviousAttemptDialogContent type='top' isEnabled={type === 'top'} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -506,6 +514,7 @@ const MobileDialogContent = forwardRef<
     return (
       <Dialog.Content
         ref={ref}
+        aria-describedby={undefined}
         className='flex flex-col gap-2 DialogContent h-[95vh] fixed top-1/2 -translate-x-1/2 left-1/2 -translate-y-1/2 rounded-2xl w-[90vw] bg-gray-800 border border-gray-700 px-6 py-6'
       >
         <div className='flex items-center justify-between'>
@@ -514,9 +523,9 @@ const MobileDialogContent = forwardRef<
             <CloseIcon />
           </Dialog.Close>
         </div>
-        <div className='absolute top-1/2 -translate-y-full left-6 right-6 flex flex-col gap-5'>
+        <div className='absolute top-1/2 -translate-y-3/4 left-6 right-6 flex flex-col gap-5'>
           <p className='text-2xl text-center'>What should we call you?</p>
-          <div className='flex flex-col gap-2'>
+          <div className='flex flex-col gap-1'>
             <input
               value={username ?? ''}
               onChange={(event) => setUsername(event.target.value)}
@@ -565,6 +574,7 @@ const MobileDialogContent = forwardRef<
 
   return (
     <Dialog.Content
+      aria-describedby={undefined}
       ref={ref}
       className='flex flex-col gap-3 DialogContent h-[95vh] fixed top-1/2 -translate-x-1/2 left-1/2 -translate-y-1/2 rounded-2xl w-[90vw] bg-gray-800 border border-gray-700 px-6 py-6'
     >
@@ -677,14 +687,14 @@ const DesktopPopoverContent = forwardRef<
         className='py-6 px-6 w-96 rounded-2xl bg-gray-800 h-[600px] border border-gray-700'
       >
         <div className='flex items-center justify-between'>
-          <h3 className='text-xl'>Chat</h3>
+          <h3 className='text-xl'>Live chat</h3>
           <Popover.Close>
             <CloseIcon />
           </Popover.Close>
         </div>
         <div className='absolute top-1/2 -translate-y-1/2 left-6 right-6 flex flex-col gap-5'>
           <p className='text-2xl text-center'>What should we call you?</p>
-          <div className='flex flex-col gap-2'>
+          <div className='flex flex-col gap-1'>
             <input
               value={username ?? ''}
               onChange={(event) => setUsername(event.target.value)}
@@ -741,7 +751,7 @@ const DesktopPopoverContent = forwardRef<
     >
       <div className='flex flex-col mb-2'>
         <div className='flex items-center justify-between'>
-          <h3 className='text-xl'>Chat</h3>
+          <h3 className='text-xl'>Live chat</h3>
           <Popover.Close>
             <CloseIcon />
           </Popover.Close>
@@ -906,7 +916,7 @@ function Game({
 
         {/* TODO: fix centering */}
         <div
-          className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex'
+          className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0'
           key={keyValue}
         >
           {[...elementsSorted].map((number) => (
