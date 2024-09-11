@@ -271,7 +271,7 @@ function PreviousAttemptsDialog() {
 
   return (
     <Dialog.Root>
-      <Dialog.Trigger className='text-lg text-gray-400'>
+      <Dialog.Trigger className='text-lg text-gray-400 text-left'>
         Previous attempts
       </Dialog.Trigger>
       <Dialog.Portal>
