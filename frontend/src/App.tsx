@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { AnimationScope, motion, useAnimate } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as Popover from '@radix-ui/react-popover';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import './dialog.css';
 import './hide-scrollbar.css';
@@ -166,10 +167,18 @@ function getTimeSince(utcTimestamp: string): string {
 function PreviousAttempt({ attempt }: { attempt: Attempt }) {
   const timeSince = getTimeSince(attempt.created_at);
 
+  const percentage = Math.floor((attempt.count / 101) * 100);
+  console.log();
+
   return (
-    <div className='flex flex-col'>
-      <p className='text-gray-50 text-lg sm:text-xl'>{attempt.count}</p>
-      <p className='text-gray-400 text-lg'>{timeSince}</p>
+    <div className='flex justify-between'>
+      <div className='flex flex-col'>
+        <p className='text-gray-50 text-lg'>
+          {attempt.count} <span className='text-gray-400'>/ 101</span>
+        </p>
+        <p className='text-gray-400 text-lg'>{timeSince}</p>
+      </div>
+      <p>{percentage}%</p>
     </div>
   );
 }
@@ -437,7 +446,7 @@ function Messages({ messages }: { messages: MessagesType }) {
   );
 }
 
-const ChatPopoverContent = forwardRef<
+const MobileDialogContent = forwardRef<
   HTMLDivElement,
   { onSendMessage: SendMessageEvent; messages: MessagesType }
 >(function ChatPopoverContent({ onSendMessage, messages }, ref) {
@@ -490,9 +499,7 @@ const ChatPopoverContent = forwardRef<
           </Dialog.Close>
         </div>
         <div className='absolute top-1/2 -translate-y-full left-6 right-6 flex flex-col gap-5'>
-          <p className='text-2xl text-center'>
-            Write a username to use the chat
-          </p>
+          <p className='text-2xl text-center'>What should we call you?</p>
           <div className='flex flex-col gap-2'>
             <input
               value={username ?? ''}
@@ -574,7 +581,7 @@ const ChatPopoverContent = forwardRef<
   );
 });
 
-function ChatPopover({
+function MobileChatDialog({
   onSendMessage,
   messages,
 }: {
@@ -588,9 +595,173 @@ function ChatPopover({
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <ChatPopoverContent onSendMessage={onSendMessage} messages={messages} />
+        <MobileDialogContent
+          onSendMessage={onSendMessage}
+          messages={messages}
+        />
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+const DesktopPopoverContent = forwardRef<
+  HTMLDivElement,
+  { onSendMessage: SendMessageEvent; messages: MessagesType }
+>(function DesktopPopoverContent({ onSendMessage, messages }, ref) {
+  const [username, setUsername] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [usernameState, setUsernameState] = useState<
+    'loading' | 'exists' | 'doesnt-exist'
+  >('loading');
+
+  useEffect(() => {
+    const usernameItem = localStorage.getItem('username');
+
+    if (usernameItem) {
+      setUsername(usernameItem);
+      setUsernameState('exists');
+    } else {
+      setUsernameState('doesnt-exist');
+    }
+  }, []);
+
+  if (usernameState === 'loading') {
+    return <p>Loading...</p>;
+  }
+
+  const handleSaveUsername = () => {
+    if (username.length === 0) {
+      return;
+    }
+
+    setUsernameState('exists');
+    localStorage.setItem('username', username);
+  };
+
+  const handleChangeName = () => {
+    setUsernameState('doesnt-exist');
+    localStorage.removeItem('username');
+    setUsername('');
+  };
+
+  if (usernameState === 'doesnt-exist') {
+    return (
+      <Popover.Content
+        side='top'
+        align='end'
+        sideOffset={12}
+        className='py-6 px-6 w-96 rounded-2xl bg-gray-800 h-[600px] border border-gray-700'
+      >
+        <div className='flex items-center justify-between'>
+          <h3 className='text-xl'>Chat</h3>
+          <Popover.Close>
+            <CloseIcon />
+          </Popover.Close>
+        </div>
+        <div className='absolute top-1/2 -translate-y-1/2 left-6 right-6 flex flex-col gap-5'>
+          <p className='text-2xl text-center'>What should we call you?</p>
+          <div className='flex flex-col gap-2'>
+            <input
+              value={username ?? ''}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder='Write a username'
+              className='w-full py-4 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none pl-4 pr-2 '
+            />
+            <button
+              onClick={handleSaveUsername}
+              className='w-full py-3 bg-gray-700 border border-gray-600 rounded-lg'
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </Popover.Content>
+    );
+  }
+
+  const handleSendMessage = () => {
+    const username = localStorage.getItem('username');
+
+    // todo: add sentry error handling
+    if (!username) {
+      return;
+    }
+
+    setMessage('');
+
+    onSendMessage({ author: username, message });
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    handleSendMessage();
+  };
+
+  return (
+    <Popover.Content
+      ref={ref}
+      side='top'
+      align='end'
+      sideOffset={12}
+      className='py-6 flex flex-col gap-3 px-6 w-96 rounded-2xl bg-gray-800 h-[600px] border border-gray-700'
+    >
+      <div className='flex flex-col mb-2'>
+        <div className='flex items-center justify-between'>
+          <h3 className='text-xl'>Chat</h3>
+          <Popover.Close>
+            <CloseIcon />
+          </Popover.Close>
+        </div>
+        <button
+          className='text-gray-500 self-start text-center'
+          onClick={handleChangeName}
+        >
+          Change username
+        </button>
+      </div>
+      <Messages messages={messages} />
+      <div className='flex flex-col gap-2'>
+        <textarea
+          value={message}
+          onKeyDown={handleKeyDown}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder='Write a message'
+          rows={1}
+          className='w-full py-4 overflow-y-auto rounded-lg h-auto resize-none border border-gray-600 bg-gray-800 text-white outline-none pl-4 pr-2 '
+        />
+        <div className='flex flex-col gap-1'>
+          <button
+            onClick={handleSendMessage}
+            className='w-full py-3 bg-gray-700 border border-gray-600 rounded-lg'
+          >
+            Send message
+          </button>
+        </div>
+      </div>
+    </Popover.Content>
+  );
+});
+
+function DesktopChatPopover({
+  onSendMessage,
+  messages,
+}: {
+  onSendMessage: SendMessageEvent;
+  messages: MessagesType;
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-8 -translate-y-full'>
+        <ChatIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <DesktopPopoverContent
+          messages={messages}
+          onSendMessage={onSendMessage}
+        />
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -662,7 +833,12 @@ function Game({
       >
         buy me a coffee
       </a>
-      <ChatPopover onSendMessage={onSendMessage} messages={messages} />
+      <div className='sm:hidden'>
+        <MobileChatDialog onSendMessage={onSendMessage} messages={messages} />
+      </div>
+      <div className='hidden sm:block'>
+        <DesktopChatPopover onSendMessage={onSendMessage} messages={messages} />
+      </div>
       <a
         target='_blank'
         className='hidden text-gray-500 underline sm:block fixed bottom-5 left-5'
