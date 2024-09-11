@@ -167,10 +167,18 @@ function getTimeSince(utcTimestamp: string): string {
 function PreviousAttempt({ attempt }: { attempt: Attempt }) {
   const timeSince = getTimeSince(attempt.created_at);
 
+  const percentage = Math.floor((attempt.count / 101) * 100);
+  console.log();
+
   return (
-    <div className='flex flex-col'>
-      <p className='text-gray-50 text-lg sm:text-xl'>{attempt.count}</p>
-      <p className='text-gray-400 text-lg'>{timeSince}</p>
+    <div className='flex justify-between'>
+      <div className='flex flex-col'>
+        <p className='text-gray-50 text-lg'>
+          {attempt.count} <span className='text-gray-400'>/ 101</span>
+        </p>
+        <p className='text-gray-400 text-lg'>{timeSince}</p>
+      </div>
+      <p>{percentage}%</p>
     </div>
   );
 }
