@@ -624,7 +624,7 @@ function MobileChatDialog({
 }) {
   return (
     <Dialog.Root>
-      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-8 -translate-y-full'>
+      <Dialog.Trigger className='flex items-center justify-center bg-gray-800 w-14 h-14 rounded-full border border-gray-700 fixed right-6 bottom-[68px]  -translate-y-full'>
         <ChatIcon />
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -919,10 +919,6 @@ function Game({
           className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0'
           key={keyValue}
         >
-          <p className='fixed w-max translate-x-[calc(50%-32px)] -translate-y-[150%] text-xl text-gray-600 right-0'>
-            This website will shut down forever once we reach{' '}
-            <span className='text-gray-50'>101</span>
-          </p>
           {[...elementsSorted].map((number) => (
             <NumberElement
               key={number}
@@ -941,37 +937,43 @@ function Game({
               {userCount} {userCount === 1 ? 'user' : 'users'} online
             </p>
           </div>
-          <div className='border max-w-[95vw] sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
-            <input
-              placeholder='Write the next number'
-              autoFocus
-              ref={inputRef}
-              value={inputValue}
-              onKeyDown={handleKeyDown}
-              className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
-              onChange={(event) => setInputValue(event.target.value)}
-            />
-            <button
-              type='button'
-              className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
-              onClick={handleSubmit}
-            >
-              <svg
-                width='24'
-                height='24'
-                viewBox='0 0 24 24'
-                fill='none'
-                xmlns='http://www.w3.org/2000/svg'
+          <div className='flex flex-col items-center'>
+            <div className='border max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
+              <input
+                placeholder='Write the next number'
+                autoFocus
+                ref={inputRef}
+                value={inputValue}
+                onKeyDown={handleKeyDown}
+                className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
+                onChange={(event) => setInputValue(event.target.value)}
+              />
+              <button
+                type='button'
+                className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
+                onClick={handleSubmit}
               >
-                <path
-                  fillRule='evenodd'
-                  clipRule='evenodd'
-                  d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
-                  fill='#FAFAF9'
-                />
-              </svg>
-            </button>
+                <svg
+                  width='24'
+                  height='24'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  xmlns='http://www.w3.org/2000/svg'
+                >
+                  <path
+                    fillRule='evenodd'
+                    clipRule='evenodd'
+                    d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
+                    fill='#FAFAF9'
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
+          <p className='text-gray-500 text-center'>
+            This website will shut down forever once we count to{' '}
+            <span className='text-gray-50'>101</span> in order
+          </p>
         </div>
       </div>
     </div>
