@@ -15,4 +15,5 @@ export const config = {
   redisURL: throwIfMissing('REDIS_URL'),
   databaseURL: throwIfMissing('DATABASE_URL'),
   openaiKey: throwIfMissing('OPENAI_API_KEY'),
+  frontendHost: throwIfMissing('FRONTEND_HOST'),
 };
