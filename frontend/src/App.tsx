@@ -914,7 +914,7 @@ function Game({
 
         {/* TODO: fix centering */}
         <div
-          className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0'
+          className='fixed top-1/2 sm:-translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0 -translate-y-full'
           key={keyValue}
         >
           {[...elementsSorted].map((number) => (
