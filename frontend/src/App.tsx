@@ -214,7 +214,7 @@ function PreviousAttemptDialogPage({
 
       {isLastPage && hasNextPage && (
         <button
-          className='bg-gray-800 py-2 text-gray-50 border border-gray-700 rounded'
+          className='bg-gray-800 py-3 text-gray-50 border border-gray-700 rounded'
           type='button'
           onClick={onLoadMore}
         >
@@ -919,6 +919,10 @@ function Game({
           className='fixed top-1/2 -translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] sm:translate-x-0'
           key={keyValue}
         >
+          <p className='fixed w-max translate-x-[calc(50%-32px)] -translate-y-[150%] text-xl text-gray-600 right-0'>
+            This website will shut down forever once we reach{' '}
+            <span className='text-gray-50'>101</span>
+          </p>
           {[...elementsSorted].map((number) => (
             <NumberElement
               key={number}
