@@ -237,7 +237,7 @@ function PreviousAttemptDialogContent({
   return (
     <>
       <div
-        className={`flex flex-col sm:max-h-72 overflow-y-scroll gap-4 ${
+        className={`flex flex-col sm:max-h-96 overflow-y-scroll gap-4 ${
           !isEnabled ? 'hidden' : ''
         }`}
       >
@@ -275,7 +275,7 @@ function PreviousAttemptsDialog() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='DialogContent flex w-[90vw] sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] h-[95vh] rounded-2xl gap-4 bg-gray-900 border border-gray-800 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
+        <Dialog.Content className='DialogContent flex w-[90vw] sm:h-auto sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] h-[95vh] rounded-2xl gap-4 bg-gray-800 border border-gray-700 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center justify-between'>
               <Dialog.Title className='text-gray-50 text-2xl'>
@@ -288,16 +288,16 @@ function PreviousAttemptsDialog() {
             <RadioGroup.Root
               value={type}
               onValueChange={handleValueChange}
-              className='bg-gray-900 border border-gray-800 rounded-lg px-2 flex py-[6px]'
+              className='bg-gray-800 border border-gray-700 rounded-lg px-2 flex py-[6px]'
             >
               <RadioGroup.Item
-                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded py-1'
+                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-700 rounded py-1'
                 value='top'
               >
                 Closest
               </RadioGroup.Item>
               <RadioGroup.Item
-                className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-800 rounded'
+                className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-700 rounded'
                 value='latest'
               >
                 Latest
