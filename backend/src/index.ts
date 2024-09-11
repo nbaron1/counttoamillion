@@ -147,12 +147,19 @@ class Attempts {
 
 class Highscore {
   async getHighScore() {
-    // get the current score from redis and check with the db for the highest score
+    try {
+      // get the current score from redis and check with the db for the highest score
+      const currentScore = await redis.get('counter');
+      const currentScoreInt = currentScore ? parseInt(currentScore) : 1;
 
-    return 1;
-  }
-  async setHighScore(value: number) {
-    return;
+      const result = await db.query('SELECT MAX(count) FROM attempt');
+      const storedHighesScore = result.rows[0].max;
+
+      return Math.max(currentScoreInt, storedHighesScore);
+    } catch (error) {
+      // todo: add sentry error logging here
+      return 1;
+    }
   }
 }
 
@@ -255,7 +262,7 @@ app.ws('/v1/websocket', (ws) => {
 
       switch (parsedData.type) {
         case 'initial': {
-          const highScore = 1;
+          const highScore = await highscore.getHighScore();
           const value = await counter.getCounterValue();
           const userCount = connections.length;
 
@@ -304,12 +311,6 @@ app.ws('/v1/websocket', (ws) => {
               console.error('Error sending message to client', error);
             }
           });
-
-          const highScore = await highscore.getHighScore();
-
-          if (parsedData.value > highScore) {
-            await highscore.setHighScore(parsedData.value);
-          }
 
           return;
         }
