@@ -6,11 +6,55 @@ import { redis } from './redis';
 import { db } from './db';
 import cors from 'cors';
 import { Client } from 'pg';
+import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
+import { v4 as uuid } from 'uuid';
 
 const app = expressWs(express()).app;
-app.use(cors({ origin: [config.frontendHost] }));
+
+app.use(cors({ origin: [config.frontendHost], credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
+
 const PAGE_SIZE = 50;
+
+class Session {
+  constructor(token: string) {
+    this.isValid = token;
+  }
+
+  isValid;
+}
+
+class SessionToken {
+  constructor(private readonly token: string) {}
+
+  isValid() {
+    try {
+      jwt.verify(this.token, config.jwtTokenSecret);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Make sure to verify before decoding
+  decode() {
+    try {
+      const token = jwt.decode(this.token);
+
+      console.log({ token });
+
+      if (typeof token !== 'string') {
+        throw new Error('Invalid token');
+      }
+
+      return token;
+    } catch (error) {
+      return null;
+    }
+  }
+}
 
 app.post('/v1/verify', async (req, res) => {
   try {
@@ -49,32 +93,151 @@ app.post('/v1/verify', async (req, res) => {
   }
 });
 
-app.get('/v1/attempts', async (req, res) => {
-  const filter = req.query.filter ?? 'latest';
+// app.get('/v1/attempts', async (req, res) => {
+//   const filter = req.query.filter ?? 'latest';
 
-  const page = req.query.page ? Number(req.query.page) : 1;
+//   const page = req.query.page ? Number(req.query.page) : 1;
 
-  if (filter !== 'latest' && filter !== 'top') {
-    res.status(400).send('Invalid filter');
-    return;
-  }
+//   if (filter !== 'latest' && filter !== 'top') {
+//     res.status(400).send('Invalid filter');
+//     return;
+//   }
 
+//   try {
+//     const attempts = new Attempts(db);
+
+//     const rows = await attempts.getRows({
+//       limit: PAGE_SIZE,
+//       offset: (page - 1) * PAGE_SIZE,
+//       filter,
+//     });
+
+//     const numberOfRows = await new Attempts(db).getCount();
+
+//     const hasNextPage = numberOfRows > page * PAGE_SIZE;
+
+//     res.status(200).send({ data: rows, success: true, hasNextPage });
+//   } catch (error) {
+//     res.status(500).send({ error: 'Internal server error', success: false });
+//   }
+// });
+
+app.get('/v1/websocket-token', async (req, res) => {
   try {
-    const attempts = new Attempts(db);
+    const token = req.cookies.token;
 
-    const rows = await attempts.getRows({
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-      filter,
+    if (!token) {
+      res.status(403).send({
+        error: 'Unauthroized',
+        success: false,
+      });
+      return;
+    }
+
+    const isVerified = new SessionToken(token).isValid();
+
+    if (!isVerified) {
+      res.sendStatus(403);
+      return;
+    }
+
+    const userId = new SessionToken(token).decode();
+
+    if (!userId) {
+      res.sendStatus(403);
+      return;
+    }
+
+    const connectionToken = uuid();
+
+    const jwtConnectionToken = jwt.sign(connectionToken, config.jwtTokenSecret);
+
+    await db.query(
+      'INSERT INTO websocket_connection_token (id, user_id) VALUES ($1, $2)',
+      [jwtConnectionToken, userId]
+    );
+
+    res.status(200).json({
+      data: {
+        token: jwtConnectionToken,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Something went wrong',
+    });
+  }
+});
+
+app.post('/v1/auth', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+
+    if (token) {
+      const decodedSessionToken = jwt.decode(token);
+
+      const searchResult = await db.query(
+        'select exists(select 1 from "user" where id = $1) as exists',
+        [decodedSessionToken]
+      );
+
+      const isValid = searchResult.rows[0].exists;
+
+      // todo: handle issues with db. we don't want to create a new user???
+      // we need to make sure the db is still online
+
+      console.log({ isValid });
+
+      if (!isValid) {
+        res.sendStatus(500);
+        return;
+      }
+
+      res.sendStatus(200);
+      return;
+    }
+
+    const userId = uuid();
+
+    const newUser = await db.query('insert into "user" (id) values ($1)', [
+      userId,
+    ]);
+
+    const jwtToken = jwt.sign(userId, config.jwtTokenSecret);
+
+    const expirationDate = new Date();
+    expirationDate.setFullYear(expirationDate.getFullYear() + 10);
+
+    res.cookie('token', jwtToken, {
+      secure: true,
+      httpOnly: true,
+      expires: expirationDate,
     });
 
-    const numberOfRows = await new Attempts(db).getCount();
-
-    const hasNextPage = numberOfRows > page * PAGE_SIZE;
-
-    res.status(200).send({ data: rows, success: true, hasNextPage });
+    res.sendStatus(200);
   } catch (error) {
-    res.status(500).send({ error: 'Internal server error', success: false });
+    console.log('error', error);
+
+    res.status(500).json({
+      success: false,
+      error: 'Something went wrong',
+    });
+  }
+});
+
+app.post('/v1/websocket-token', (req, res) => {
+  try {
+    const token = uuid();
+
+    const jwtToken = jwt.sign(token, config.jwtTokenSecret);
+
+    res.status(200).json({
+      success: true,
+      data: { token: jwtToken },
+    });
+  } catch (error) {
+    res.sendStatus(500);
   }
 });
 
@@ -87,6 +250,30 @@ app.get('/v1/messages', async (req, res) => {
     const rows = await messages.getLatestMessages(limit);
 
     res.status(200).send({ data: rows, success: true });
+  } catch (error) {
+    res.status(500).send({ error: 'Internal server error', success: false });
+  }
+});
+
+class GameStatus {
+  constructor(private readonly db: Client) {}
+
+  async getGameStatus() {
+    const result = await db.query('SELECT * FROM game_status');
+    return result.rows[0];
+  }
+
+  async finishGame() {
+    await db.query('UPDATE game_status SET finished_at = NOW()');
+  }
+}
+
+app.get('/v1/game-status', async (req, res) => {
+  try {
+    const gameStatus = new GameStatus(db);
+    const status = await gameStatus.getGameStatus();
+
+    res.status(200).send({ data: status, success: true });
   } catch (error) {
     res.status(500).send({ error: 'Internal server error', success: false });
   }
@@ -106,8 +293,12 @@ class Counter {
 class Attempts {
   constructor(private readonly db: Client) {}
 
-  async addAttempt(count: number) {
-    await db.query('INSERT INTO attempt (count) VALUES ($1)', [count]);
+  async addAttempt({ count, userId }: { count: number; userId: string }) {
+    console.log({ userId });
+    await this.db.query(
+      'INSERT INTO attempt (count, user_id) VALUES ($1, $2)',
+      [count, userId]
+    );
   }
 
   async getCount() {
@@ -240,8 +431,14 @@ const highscore = new Highscore();
 
 let connections: WebSocket[] = [];
 
-app.ws('/v1/websocket', (ws) => {
-  console.log('Connected!');
+app.ws('/v1/websocket', (ws, req) => {
+  const token = req.cookies.token;
+
+  if (!token) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
   connections.push(ws);
 
   connections.forEach((connection) => {
@@ -282,35 +479,30 @@ app.ws('/v1/websocket', (ws) => {
           if (currentCount + 1 !== parsedData.value) {
             await counter.setCounterValue(1);
 
-            await new Attempts(db).addAttempt(currentCount);
+            const userId = new SessionToken(token).decode();
+            if (!userId) return;
 
-            connections.forEach((connection) => {
-              try {
-                connection.send(
-                  JSON.stringify({ type: 'failed', value: parsedData.value })
-                );
-              } catch (error) {
-                console.error('Error sending message to client', error);
-              }
-            });
+            await new Attempts(db).addAttempt({ count: currentCount, userId });
+
+            try {
+              ws.send(
+                JSON.stringify({ type: 'failed', value: parsedData.value })
+              );
+            } catch (error) {
+              console.error('Error sending message to client', error);
+            }
 
             return;
           }
 
           await counter.setCounterValue(parsedData.value);
 
-          connections.forEach((connection) => {
-            try {
-              connection.send(
-                JSON.stringify({
-                  value: parsedData.value,
-                  type: 'count-updated',
-                })
-              );
-            } catch (error) {
-              console.error('Error sending message to client', error);
-            }
-          });
+          ws.send(
+            JSON.stringify({
+              value: parsedData.value,
+              type: 'count-updated',
+            })
+          );
 
           return;
         }
