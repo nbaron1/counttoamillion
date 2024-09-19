@@ -2,7 +2,6 @@ import express from 'express';
 import { config } from './config';
 import expressWs from 'express-ws';
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import { db } from './db';
 import { supabase } from './supabase';
 
@@ -10,7 +9,6 @@ const app = expressWs(express()).app;
 
 app.use(cors({ origin: [config.frontendHost], credentials: true }));
 app.use(express.json());
-app.use(cookieParser());
 
 app.ws('/v1/websocket', async (ws, req) => {
   const token = req.query.token;
