@@ -289,25 +289,6 @@ type MessagesType =
     }[]
   | null;
 
-const fetchMessages = async () => {
-  // try {
-  //   const result = await fetch(`${BACKEND_HOST}/v1/messages?limit=50`);
-  //   if (!result.ok) {
-  //     throw new Error('Failed to fetch messages');
-  //   }
-  //   const data = (await result.json()) as { data: MessagesType };
-  //   return data.data;
-  // } catch {
-  //   const waitOneSecond = new Promise((resolve) => {
-  //     setTimeout(() => {
-  //       resolve([]);
-  //     }, 1000);
-  //   });
-  //   await waitOneSecond;
-  //   return fetchMessages();
-  // }
-};
-
 function Messages({
   messages,
   messagesRef,
@@ -1277,10 +1258,17 @@ const useSubscribe = () => {
 const useWebsocket = () => {
   const websocketRef = useRef<WebSocket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const retryTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
   const user = useUser();
 
   const handleOpen = useCallback(() => {
     setIsLoading(false);
+    console.log('is connected!');
+
+    retryTimeoutsRef.current.forEach((timeout) => {
+      clearTimeout(timeout);
+    });
   }, []);
 
   const sendMessage = (data: string) => {
@@ -1299,18 +1287,33 @@ const useWebsocket = () => {
       }
 
       if (!data.session) return;
+      if (websocketRef.current) return;
 
       const accessToken = data.session.access_token;
-      console.log({ accessToken });
 
       const url = `${config.backendWebsocketHost}/v1/websocket?token=${accessToken}`;
-      console.log({ url });
-      if (websocketRef.current) return;
       const websocket = new WebSocket(url);
 
       websocket.addEventListener('open', handleOpen);
       websocket.addEventListener('close', () => {
-        console.log('WebSocket closed');
+        if (websocketRef.current) {
+          websocketRef.current.removeEventListener('open', handleOpen);
+        }
+
+        websocketRef.current = null;
+
+        // clear previous timeouts
+        retryTimeoutsRef.current.forEach((timeout) => {
+          clearTimeout(timeout);
+        });
+
+        retryTimeoutsRef.current = [];
+
+        const newTimeout = setTimeout(async () => {
+          connectWebSocket();
+        }, 1500);
+
+        retryTimeoutsRef.current.push(newTimeout);
       });
       websocket.addEventListener('message', (event) => {
         console.log('MESSAGE', event.data);
@@ -1430,6 +1433,7 @@ function Home() {
   }
 
   const handleSubmit = () => {
+    // console.log({ nextNumber });
     sendMessage(JSON.stringify({ type: 'update-count', value: nextNumber }));
   };
 
@@ -1441,7 +1445,7 @@ function Home() {
       <input
         type='number'
         placeholder='Write next number'
-        value={nextNumber}
+        value={String(nextNumber)}
         onChange={(event) => {
           console.log(Number(event.target.value));
           setNextNumber(Number(event.target.value));

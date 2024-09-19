@@ -2,7 +2,8 @@
 create table app_user (
   id uuid primary key references auth.users on delete cascade,
   created_at timestamp not null default now(),
-  username text not null
+  username text not null,
+  highest_count bigint not null default 1
 );
 
 create table attempt (
@@ -30,6 +31,7 @@ alter table app_user add column current_attempt_id bigint references attempt(id)
 
 -- Enable RLS and create policies
 alter table "app_user" enable row level security;
+create policy "Viewable by everyone" on app_user for select to authenticated, anon using (true);
 
 alter table "message" enable row level security;
 create policy "Viewable by everyone" on message for select to authenticated, anon using (true);
@@ -69,3 +71,24 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+
+-- Update the highest_count column in app_user
+CREATE OR REPLACE FUNCTION update_highest_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE app_user
+    SET highest_count = GREATEST(COALESCE(highest_count, 0), NEW.count)
+    WHERE id = NEW.user_id;
+
+    -- TODO: Check if count is higher than 1,000,000 and if so end the game
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_highest_count_trigger
+AFTER INSERT OR UPDATE ON attempt
+FOR EACH ROW
+EXECUTE FUNCTION update_highest_count();
+ 

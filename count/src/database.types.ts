@@ -38,18 +38,21 @@ export type Database = {
         Row: {
           created_at: string
           current_attempt_id: number | null
+          highest_count: number
           id: string
           username: string
         }
         Insert: {
           created_at?: string
           current_attempt_id?: number | null
+          highest_count?: number
           id: string
           username: string
         }
         Update: {
           created_at?: string
           current_attempt_id?: number | null
+          highest_count?: number
           id?: string
           username?: string
         }

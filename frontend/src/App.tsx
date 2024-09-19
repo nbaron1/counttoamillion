@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Home } from './Home';
 import { AuthProvider } from './context/Auth';
+import { Leaderboard } from './Leaderboard';
 
 const router = createBrowserRouter([
   {
@@ -9,7 +10,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/leaderboard',
-    element: <p>Leaderboard</p>,
+    element: <Leaderboard />,
   },
 ]);
 
