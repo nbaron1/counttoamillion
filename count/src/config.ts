@@ -18,4 +18,6 @@ export const config = {
   frontendHost: throwIfMissing('FRONTEND_HOST'),
   turnstileSecret: throwIfMissing('CF_TURNSTILE_SECRET'),
   jwtTokenSecret: throwIfMissing('JWT_TOKEN_SECRET'),
+  supabaseURL: throwIfMissing('SUPABASE_URL'),
+  supabaseSecretKey: throwIfMissing('SUPABASE_SECRET_KEY'),
 };

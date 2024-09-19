@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "scripts": {
+    "gen-types": "npm run gen-types:count && npm run gen-types:frontend",
+    "gen-types:count": "cd ./count && supabase gen types --lang=typescript --local > ./src/database.types.ts",
+    "gen-types:frontend": "cd ./frontend && supabase gen types --lang=typescript --local > ./src/database.types.ts"
+  }
+}

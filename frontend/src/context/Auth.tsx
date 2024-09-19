@@ -1,45 +1,83 @@
 import React, { useEffect, useState } from 'react';
-import { axiosInstance } from '../lib/axios';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import { Spinner } from '../Home';
 
-const AuthContext = React.createContext<{
-  isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
-}>({ isAuthenticated: false, setIsAuthenticated: () => null });
+const UserContext = React.createContext<User | null>(null);
+
+export const useUser = () => React.useContext(UserContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const auth = async () => {
-      try {
-        console.log('Authenticating...');
-        const response = await axiosInstance.post('/v1/auth');
-
-        if (!response.data.success) {
-          throw new Error('Failed to authenticate');
-        }
-
-        return response;
-      } catch (error) {
-        console.error('Failed to authenticate', error);
-        const oneSecond = new Promise((resolve) => setTimeout(resolve, 1000));
-
-        await oneSecond;
-      }
+    // Check active sessions and sets the user
+    const setSessionUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setIsLoading(false);
     };
+    setSessionUser();
 
-    auth().then(() => {
-      setIsAuthenticated(true);
-    });
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_, session) => {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
-  if (!isAuthenticated) {
-    return <p className='text-white'>Loading...</p>;
+  useEffect(() => {
+    const handleAnonymousAuth = async () => {
+      const response = await supabase.auth.signInAnonymously();
+      console.log({ response });
+    };
+
+    if (isLoading || user) return;
+
+    handleAnonymousAuth();
+  }, [user, isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className='text-white fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2'>
+        <Spinner />
+      </div>
+    );
   }
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
 }
+
+//   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+//   useEffect(() => {
+//     const auth = async () => {};
+
+//     auth().then(() => {
+//       setIsAuthenticated(true);
+//     });
+//   }, []);
+
+//   if (!isAuthenticated) {
+//     return (
+//       <div className='text-white fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2'>
+//         <Spinner />
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
+//       {children}
+//     </AuthContext.Provider>
+//   );

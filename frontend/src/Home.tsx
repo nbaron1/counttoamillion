@@ -7,13 +7,16 @@ import {
   useRef,
   useState,
 } from 'react';
-import { AnimationScope, motion, useAnimate } from 'framer-motion';
+import { AnimationScope, motion } from 'framer-motion';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
-import * as RadioGroup from '@radix-ui/react-radio-group';
 import './dialog.css';
 import './hide-scrollbar.css';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { UsernamePopover } from './UsernamePopover';
+import { supabase } from './lib/supabase';
+import { config } from './lib/config';
+import { useUser } from './context/Auth';
 
 function ChatIcon() {
   return (
@@ -80,25 +83,6 @@ const BACKEND_HOST = import.meta.env.VITE_BACKEND_HOST;
 if (!BACKEND_HOST) {
   throw new Error('VITE_BACKEND_HOST not found');
 }
-
-// function CloseIcon() {
-//   return (
-//     <svg
-//       width='20'
-//       height='20'
-//       viewBox='0 0 20 20'
-//       fill='none'
-//       xmlns='http://www.w3.org/2000/svg'
-//     >
-//       <path
-//         fill-rule='evenodd'
-//         clip-rule='evenodd'
-//         d='M4.41107 4.41009C4.73651 4.08466 5.26414 4.08466 5.58958 4.41009L10.0003 8.82084L14.4111 4.41009C14.7365 4.08466 15.2641 4.08466 15.5896 4.41009C15.915 4.73553 15.915 5.26317 15.5896 5.5886L11.1788 9.99935L15.5896 14.4101C15.915 14.7355 15.915 15.2632 15.5896 15.5886C15.2641 15.914 14.7365 15.914 14.4111 15.5886L10.0003 11.1779L5.58958 15.5886C5.26414 15.914 4.73651 15.914 4.41107 15.5886C4.08563 15.2632 4.08563 14.7355 4.41107 14.4101L8.82182 9.99935L4.41107 5.5886C4.08563 5.26317 4.08563 4.73553 4.41107 4.41009Z'
-//         fill='white'
-//       />
-//     </svg>
-//   );
-// }
 
 const useAttempts = ({
   filter,
@@ -257,64 +241,6 @@ function PreviousAttemptDialogContent({
 
 type AttemptFilter = 'latest' | 'top';
 
-function PreviousAttemptsDialog() {
-  const [type, setType] = useState<AttemptFilter>('top');
-
-  const handleValueChange = (value: string) => {
-    if (value !== 'latest' && value !== 'top') {
-      return;
-    }
-
-    setType(value);
-  };
-
-  return (
-    <Dialog.Root>
-      <Dialog.Trigger className='text-lg text-gray-400 text-left'>
-        Previous attempts
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className='fixed top-0 left-0 right-0 bottom-0 bg-black opacity-50' />
-        <Dialog.Content className='DialogContent flex w-[90vw] sm:h-auto sm:w-[450px] flex-col px-5 py-6 max-w-[90vw] h-[95vh] rounded-2xl gap-4 bg-gray-800 border border-gray-700 z-30 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
-          <div className='flex flex-col gap-4'>
-            <div className='flex items-center justify-between'>
-              <Dialog.Title className='text-gray-50 text-2xl'>
-                Attempts
-              </Dialog.Title>
-              <Dialog.Close>
-                <CloseIcon />
-              </Dialog.Close>
-            </div>
-            <RadioGroup.Root
-              value={type}
-              onValueChange={handleValueChange}
-              className='bg-gray-800 border border-gray-700 rounded-lg px-2 flex py-[6px]'
-            >
-              <RadioGroup.Item
-                className='text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-700 rounded py-1'
-                value='top'
-              >
-                Closest
-              </RadioGroup.Item>
-              <RadioGroup.Item
-                className='py-1 text-center flex-1 text-gray-50 data-[state=checked]:bg-gray-700 rounded'
-                value='latest'
-              >
-                Latest
-              </RadioGroup.Item>
-            </RadioGroup.Root>
-          </div>
-          <PreviousAttemptDialogContent
-            type='latest'
-            isEnabled={type === 'latest'}
-          />
-          <PreviousAttemptDialogContent type='top' isEnabled={type === 'top'} />
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
-
 function CloseIcon() {
   return (
     <svg
@@ -354,37 +280,32 @@ function Message({ author, message }: { message: string; author: string }) {
   );
 }
 
-type MessageType = {
-  id: number;
-  message: string;
-  createdAt: string;
-  author: string;
-};
+type MessagesType =
+  | {
+      created_at: string;
+      id: number;
+      message: string;
+      user_id: string;
+    }[]
+  | null;
 
-type MessagesType = MessageType[] | null;
-
-const fetchMessages = async (): Promise<MessagesType> => {
-  try {
-    const result = await fetch(`${BACKEND_HOST}/v1/messages?limit=50`);
-
-    if (!result.ok) {
-      throw new Error('Failed to fetch messages');
-    }
-
-    const data = (await result.json()) as { data: MessagesType };
-
-    return data.data;
-  } catch {
-    const waitOneSecond = new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([]);
-      }, 1000);
-    });
-
-    await waitOneSecond;
-
-    return fetchMessages();
-  }
+const fetchMessages = async () => {
+  // try {
+  //   const result = await fetch(`${BACKEND_HOST}/v1/messages?limit=50`);
+  //   if (!result.ok) {
+  //     throw new Error('Failed to fetch messages');
+  //   }
+  //   const data = (await result.json()) as { data: MessagesType };
+  //   return data.data;
+  // } catch {
+  //   const waitOneSecond = new Promise((resolve) => {
+  //     setTimeout(() => {
+  //       resolve([]);
+  //     }, 1000);
+  //   });
+  //   await waitOneSecond;
+  //   return fetchMessages();
+  // }
 };
 
 function Messages({
@@ -1000,6 +921,8 @@ function Game({
   keyValue,
   onSendMessage,
   messages,
+  username,
+  setUsername,
 }: {
   failedNumber: null | number;
   highscore: number;
@@ -1010,11 +933,13 @@ function Game({
   keyValue: number;
   onSendMessage: SendMessageEvent;
   messages: MessagesType;
+  username: string;
+  setUsername: (value: string) => void;
 }) {
   const highestNumber = useMemo(() => Math.max(...elements), [elements]);
 
   const elementsSorted = Array.from(elements).sort((a, b) => a - b);
-
+  console.log('is here!');
   return (
     <div ref={scope}>
       <a
@@ -1029,18 +954,20 @@ function Game({
       <div className='hidden sm:block'>
         <DesktopChatPopover onSendMessage={onSendMessage} messages={messages} />
       </div>
-      <a
-        target='_blank'
-        className='hidden text-gray-500 underline sm:block fixed bottom-5 left-5'
-        href='https://nbaron.com/'
-      >
-        built by nbaron
-      </a>
+      <div className='flex items-center gap-5'>
+        <a
+          target='_blank'
+          className='hidden text-gray-500 underline sm:block fixed bottom-5 left-5'
+          href='https://nbaron.com/'
+        >
+          built by nbaron
+        </a>
+      </div>
       <Timestamp />
       <div className='fixed sm:right-6 top-5 sm:justify-between left-5 text-lg text-gray-50 flex'>
         <div className='flex flex-col'>
-          <p>Closest attempt: {highscore}</p>
-          {/* <PreviousAttemptsDialog /> */}
+          <a href='/leaderboard'>Leaderboard</a>
+          <UsernamePopover setUsername={setUsername} username={username} />
         </div>
 
         <div className='hidden sm:flex items-center gap-3 h-fit'>
@@ -1100,6 +1027,7 @@ function Game({
 type State = {
   isLoading: boolean;
   userCount: number;
+  username: string;
   highscore: number;
   elements: Set<number>;
   failedNumber: number | null;
@@ -1111,6 +1039,7 @@ type Action =
       highScore: number;
       userCount: number;
       value: number;
+      username: string;
     }
   | { type: 'update-user-count'; value: number }
   | { type: 'update-count'; value: number }
@@ -1124,6 +1053,7 @@ const initialState: State = {
   isLoading: true,
   highscore: 0,
   userCount: 0,
+  username: '',
 };
 
 function reducer(state: State, action: Action): State {
@@ -1144,6 +1074,7 @@ function reducer(state: State, action: Action): State {
         isLoading: false,
         highscore: action.highScore,
         userCount: action.userCount,
+        username: action.username,
         elements: elementsSet,
       };
     }
@@ -1209,91 +1140,91 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-function Spinner() {
+export function Spinner() {
   return (
     <div className='animate-spin w-11 h-11 border-4 border-solid border-white border-b-transparent rounded-[50%]'></div>
   );
 }
 
-function WaitingScreen({ startedAtTimestamp }: { startedAtTimestamp: string }) {
-  const [seconds, setSeconds] = useState<null | string>(null);
-  const [hours, setHours] = useState<null | string>(null);
-  const [minutes, setMinutes] = useState<null | string>(null);
-  const [days, setDays] = useState<null | string>(null);
+// function WaitingScreen({ startedAtTimestamp }: { startedAtTimestamp: string }) {
+//   const [seconds, setSeconds] = useState<null | string>(null);
+//   const [hours, setHours] = useState<null | string>(null);
+//   const [minutes, setMinutes] = useState<null | string>(null);
+//   const [days, setDays] = useState<null | string>(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-      const startedAt = new Date(startedAtTimestamp).getTime();
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       const now = new Date().getTime();
+//       const startedAt = new Date(startedAtTimestamp).getTime();
 
-      const difference = startedAt - now;
+//       const difference = startedAt - now;
 
-      const seconds = difference / 1000;
-      const minutes = seconds / 60;
-      const hours = minutes / 60;
-      const days = hours / 24;
+//       const seconds = difference / 1000;
+//       const minutes = seconds / 60;
+//       const hours = minutes / 60;
+//       const days = hours / 24;
 
-      const hoursUntil = Math.floor(hours % 24);
-      const minutesUntil = Math.floor(minutes % 60);
-      const secondsUntil = Math.floor(seconds % 60);
-      const daysUntil = Math.floor(days).toString();
+//       const hoursUntil = Math.floor(hours % 24);
+//       const minutesUntil = Math.floor(minutes % 60);
+//       const secondsUntil = Math.floor(seconds % 60);
+//       const daysUntil = Math.floor(days).toString();
 
-      setSeconds(secondsUntil.toString().padStart(2, '0'));
-      setMinutes(minutesUntil.toString().padStart(2, '0'));
-      setHours(hoursUntil.toString().padStart(2, '0'));
-      setDays(daysUntil.toString().padStart(2, '0'));
-    }, 250);
+//       setSeconds(secondsUntil.toString().padStart(2, '0'));
+//       setMinutes(minutesUntil.toString().padStart(2, '0'));
+//       setHours(hoursUntil.toString().padStart(2, '0'));
+//       setDays(daysUntil.toString().padStart(2, '0'));
+//     }, 250);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [startedAtTimestamp]);
+//     return () => {
+//       clearInterval(interval);
+//     };
+//   }, [startedAtTimestamp]);
 
-  if (!days || !hours || !minutes || !seconds) {
-    return (
-      <div className='fixed top-1/2 left-1/2 -translate-y-full -transalte-x-1/2'>
-        <Spinner />
-      </div>
-    );
-  }
+//   if (!days || !hours || !minutes || !seconds) {
+//     return (
+//       <div className='fixed top-1/2 left-1/2 -translate-y-full -transalte-x-1/2'>
+//         <Spinner />
+//       </div>
+//     );
+//   }
 
-  return (
-    <>
-      <div className='flex flex-col absolute top-1/2 -translate-y-1/2 px-7 gap-12'>
-        <p className='text-gray-300 text-center'>
-          CountTo101 is a website that will shut down forever once we count to{' '}
-          <span className='text-gray-50'>101</span> in order
-        </p>
-        <div className='flex flex-col text-center items-center gap-1'>
-          <p className='w-[740] text-gray-200'>CountTo101 will begin in:</p>
-          <p className='text-6xl'>
-            {days}:{hours}:{minutes}:{seconds}
-          </p>
-        </div>
-        <div className='flex flex-col gap-1'>
-          <input
-            placeholder='Write your email here'
-            className='px-9 flex items-center border-gray-700 border bg-gray-800 rounded-3xl text-gray-400 h-16'
-          />
-          <a
-            href='https://discord.gg/wScae7pMzF'
-            className='px-9 flex items-center border-gray-700 bg-gray-800 border rounded-3xl text-gray-50 h-16'
-          >
-            Join the discord
-          </a>
-        </div>
-      </div>
-      <a
-        className='fixed bottom-4 left-4 text-gray-500 underline text-lg'
-        href='https://nbaron.com'
-        target='_blank'
-        rel='noreferrer'
-      >
-        built by nbaron
-      </a>
-    </>
-  );
-}
+//   return (
+//     <>
+//       <div className='flex flex-col absolute top-1/2 -translate-y-1/2 px-7 gap-12'>
+//         <p className='text-gray-300 text-center'>
+//           CountTo101 is a website that will shut down forever once we count to{' '}
+//           <span className='text-gray-50'>101</span> in order
+//         </p>
+//         <div className='flex flex-col text-center items-center gap-1'>
+//           <p className='w-[740] text-gray-200'>CountTo101 will begin in:</p>
+//           <p className='text-6xl'>
+//             {days}:{hours}:{minutes}:{seconds}
+//           </p>
+//         </div>
+//         <div className='flex flex-col gap-1'>
+//           <input
+//             placeholder='Write your email here'
+//             className='px-9 flex items-center border-gray-700 border bg-gray-800 rounded-3xl text-gray-400 h-16'
+//           />
+//           <a
+//             href='https://discord.gg/wScae7pMzF'
+//             className='px-9 flex items-center border-gray-700 bg-gray-800 border rounded-3xl text-gray-50 h-16'
+//           >
+//             Join the discord
+//           </a>
+//         </div>
+//       </div>
+//       <a
+//         className='fixed bottom-4 left-4 text-gray-500 underline text-lg'
+//         href='https://nbaron.com'
+//         target='_blank'
+//         rel='noreferrer'
+//       >
+//         built by nbaron
+//       </a>
+//     </>
+//   );
+// }
 
 type GameStatusData = {
   id: number;
@@ -1303,22 +1234,113 @@ type GameStatusData = {
 
 type SendMessageEvent = (data: { message: string; author: string }) => void;
 
-function Home() {
-  const websocketRef = useRef<WebSocket | null>(null);
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const [key, rerender] = useState(Math.random());
-  const [scope, animate] = useAnimate();
+const createEventEmitter = () => {
+  const listeners = new Map();
 
-  const [messages, setMessages] = useState<MessagesType>(null);
-  const hasLoaded = useRef(false);
+  const on = (event: string, callback: (data: unknown) => void) => {
+    if (!listeners.has(event)) {
+      listeners.set(event, new Set());
+    }
+    listeners.get(event).add(callback);
+    return () => off(event, callback);
+  };
+
+  const off = (event: string, callback: (data: unknown) => void) => {
+    if (listeners.has(event)) {
+      listeners.get(event).delete(callback);
+    }
+  };
+
+  const emit = (event: string, data: unknown) => {
+    if (listeners.has(event)) {
+      listeners
+        .get(event)
+        .forEach((callback: (data: unknown) => void) => callback(data));
+    }
+  };
+
+  return { on, off, emit };
+};
+
+const eventEmitter = createEventEmitter();
+
+const useSubscribe = () => {
+  return (topic: string, cb: (data: any) => void) => {
+    eventEmitter.on(topic, cb);
+
+    return () => {
+      eventEmitter.off(topic, cb);
+    };
+  };
+};
+
+const useWebsocket = () => {
+  const websocketRef = useRef<WebSocket | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const user = useUser();
+
+  const handleOpen = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const sendMessage = (data: string) => {
+    websocketRef.current?.send(data);
+  };
+
+  useEffect(() => {
+    const connectWebSocket = async () => {
+      if (!user) return; // Only connect if user is authenticated
+
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error('Error getting session:', error);
+        return;
+      }
+
+      if (!data.session) return;
+
+      const accessToken = data.session.access_token;
+      console.log({ accessToken });
+
+      const url = `${config.backendWebsocketHost}/v1/websocket?token=${accessToken}`;
+      console.log({ url });
+      if (websocketRef.current) return;
+      const websocket = new WebSocket(url);
+
+      websocket.addEventListener('open', handleOpen);
+      websocket.addEventListener('close', () => {
+        console.log('WebSocket closed');
+      });
+      websocket.addEventListener('message', (event) => {
+        console.log('MESSAGE', event.data);
+        eventEmitter.emit('message', event.data);
+      });
+
+      websocketRef.current = websocket;
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (websocketRef.current) {
+        websocketRef.current.removeEventListener('open', handleOpen);
+        websocketRef.current.close();
+      }
+    };
+  }, [handleOpen, user]);
+
+  return { isLoading, sendMessage };
+};
+
+const useGameStatus = () => {
+  const [gameStatusData, setGameStatusData] = useState<GameStatusData | null>(
+    null
+  );
 
   const [gameStatus, setGameStatus] = useState<
     null | 'waiting' | 'ongoing' | 'final'
   >(null);
-
-  const [gameStatusData, setGameStatusData] = useState<GameStatusData | null>(
-    null
-  );
 
   const updatedGameStatus = (gameStatusData: GameStatusData) => {
     const startedAtTime = new Date(gameStatusData.started_at).getTime();
@@ -1353,242 +1375,53 @@ function Home() {
     };
   }, [gameStatusData]);
 
-  const fetchGameStatusData = useCallback(async () => {
+  const getGameStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${BACKEND_HOST}/v1/game-status`, {
-        method: 'GET',
-      });
+      // return data.data;
+      const { data } = await supabase.from('game_status').select('*');
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch game status');
-      }
+      // todo: sentry error handling
+      if (!data) return;
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error('Failed to fetch game status');
-      }
-
-      return data.data;
-    } catch {
-      const oneSecond = new Promise<void>((resolve) => {
-        setTimeout(() => {
-          resolve();
-        }, 1000);
-      });
-
-      await oneSecond;
-
-      return fetchGameStatusData();
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchGameStatusData().then((data) => setGameStatusData(data));
-  }, [fetchGameStatusData]);
-
-  useEffect(() => {
-    if (hasLoaded.current) return;
-
-    hasLoaded.current = true;
-
-    try {
-      fetchMessages().then((data) => {
-        setMessages(data);
-      });
+      setGameStatusData(data[0]);
     } catch (error) {
-      console.error('Error fetching messages', error);
+      console.log(error);
+      // const oneSecond = new Promise<void>((resolve) => {
+      //   setTimeout(() => {
+      //     resolve();
+      //   }, 1000);
+      // });
+      // await oneSecond;
+      // return fetchGameStatusData();
     }
   }, []);
-
-  const handleMessage = useCallback(
-    (event: MessageEvent) => {
-      try {
-        const parsedData = JSON.parse(event.data as string);
-
-        console.log(parsedData.type);
-
-        switch (parsedData.type) {
-          case 'auth-required': {
-            window.location.href = '/auth';
-            break;
-          }
-          case 'initial': {
-            dispatch({
-              type: 'initial',
-              highScore: parsedData.highScore,
-              userCount: parsedData.userCount,
-              value: parsedData.value,
-            });
-
-            break;
-          }
-          case 'count-updated': {
-            if (state.isLoading) {
-              return;
-            }
-
-            dispatch({
-              type: 'update-count',
-              value: parsedData.value,
-            });
-
-            break;
-          }
-          case 'message': {
-            console.log('Received message', parsedData);
-            setMessages((prev) => {
-              console.log(parsedData);
-              if (!prev) return [parsedData];
-              return [...prev, parsedData];
-            });
-
-            break;
-          }
-          case 'failed': {
-            dispatch({
-              type: 'start-failed-number-animation',
-              value: parsedData.value,
-            });
-
-            setTimeout(() => {
-              animate(
-                '.number-element',
-                { opacity: 0, y: 500 },
-                {
-                  ease: 'backInOut',
-                  duration: 0.75,
-                  onComplete: () => {
-                    dispatch({
-                      type: 'complete-failed-number-animation',
-                      value: null,
-                    });
-
-                    // TODO: Find a better way to rerender
-                    rerender(Math.random());
-                  },
-                }
-              );
-            }, 300);
-
-            console.log('Failed to update count');
-            break;
-          }
-          case 'user-count': {
-            dispatch({
-              value: parsedData.value,
-              type: 'update-user-count',
-            });
-
-            break;
-          }
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    [animate, state.isLoading]
-  );
-
-  const handleError = useCallback((event: Event) => {
-    console.log('Websocket error', event);
-    dispatch({ type: 'disconnect' });
-  }, []);
-
-  const handleClose = useCallback((event: CloseEvent) => {
-    dispatch({ type: 'disconnect' });
-    websocketRef.current = null;
-
-    if (event.reason === 'Unauthorized') {
-      window.location.href = '/auth';
-      return;
-    }
-
-    // Attempt to reconnect after 1.5 seconds
-    setTimeout(() => {
-      connectWebSocket();
-    }, 1500);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleOpen = useCallback((event: Event) => {
-    if (!websocketRef.current) return;
-
-    console.log('Connected to server', event);
-    console.log('Sending initial message...');
-
-    websocketRef.current.send(JSON.stringify({ type: 'initial' }));
-  }, []);
-
-  const connectWebSocket = useCallback(async () => {
-    console.log('Connecting to websocket...');
-
-    if (!websocketRef.current) {
-      try {
-        // const getConnectionToken = await
-
-        websocketRef.current = new WebSocket(`${WEBSOCKET_HOST}/v1/websocket`);
-      } catch (error) {
-        console.log('Something went wrong connecting to WS', error);
-      }
-    }
-
-    websocketRef.current?.addEventListener('open', handleOpen);
-    websocketRef.current?.addEventListener('message', handleMessage);
-    websocketRef.current?.addEventListener('close', handleClose);
-    websocketRef.current?.addEventListener('error', handleError);
-  }, [handleClose, handleError, handleMessage, handleOpen]);
 
   useEffect(() => {
-    connectWebSocket();
+    getGameStatus();
+  }, [getGameStatus]);
 
-    return () => {
-      if (websocketRef.current) {
-        websocketRef.current.removeEventListener('open', handleOpen);
-        websocketRef.current.removeEventListener('message', handleMessage);
-        websocketRef.current.removeEventListener('close', handleClose);
-        websocketRef.current.removeEventListener('error', handleError);
-      }
-    };
-  }, [connectWebSocket, handleClose, handleError, handleMessage, handleOpen]);
+  return gameStatus;
+};
 
-  const handleSubmit = async (value: number) => {
-    if (!websocketRef.current) {
-      return;
-    }
+function Home() {
+  const { sendMessage } = useWebsocket();
+  const gameStatus = useGameStatus();
+  const [nextNumber, setNextNumber] = useState<number>(0);
+  const [number, setNumber] = useState<number | null>(0);
 
-    websocketRef.current.send(JSON.stringify({ type: 'update-count', value }));
-  };
+  const subscribe = useSubscribe();
 
-  const handleSendMessage = ({
-    message,
-    author,
-  }: {
-    message: string;
-    author: string;
-  }) => {
-    if (!websocketRef.current || !messages) {
-      return;
-    }
+  useEffect(() => {
+    const unsubscribe = subscribe('message', (data) => {
+      const parsedData = JSON.parse(data);
+      setNumber(parsedData.value);
+      console.log('Data:', parsedData);
+    });
 
-    console.log('Sending message', { message, author });
+    return unsubscribe;
+  });
 
-    const newOptimisticMessage = {
-      author,
-      message,
-      createdAt: new Date().toISOString(),
-      id: Math.random(),
-    };
-
-    setMessages(() => [...messages, newOptimisticMessage]);
-
-    websocketRef.current.send(
-      JSON.stringify({ type: 'message', message, author })
-    );
-  };
-
-  if (state.isLoading || !gameStatusData) {
+  if (!gameStatus) {
     return (
       <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
         <Spinner />
@@ -1596,45 +1429,29 @@ function Home() {
     );
   }
 
-  console.log(gameStatus);
+  const handleSubmit = () => {
+    sendMessage(JSON.stringify({ type: 'update-count', value: nextNumber }));
+  };
+
+  if (number === null) return;
 
   return (
-    <Game
-      elements={state.elements}
-      failedNumber={state.failedNumber}
-      highscore={state.highscore}
-      userCount={state.userCount}
-      onSendMessage={handleSendMessage}
-      keyValue={key}
-      onSubmit={handleSubmit}
-      scope={scope}
-      messages={messages}
-    />
+    <div className='text-black flex flex-col fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2'>
+      <p className='text-white'>{number}</p>
+      <input
+        type='number'
+        placeholder='Write next number'
+        value={nextNumber}
+        onChange={(event) => {
+          console.log(Number(event.target.value));
+          setNextNumber(Number(event.target.value));
+        }}
+      />
+      <button className='text-white' onClick={handleSubmit}>
+        Submit
+      </button>
+    </div>
   );
-
-  // switch (gameStatus) {
-  //   case 'waiting': {
-  //     return <WaitingScreen startedAtTimestamp={gameStatusData.started_at} />;
-  //   }
-  //   case 'final': {
-  //     return <p>Game has ended</p>;
-  //   }
-  //   case 'ongoing': {
-  //     return (
-  //       <Game
-  //         elements={state.elements}
-  //         failedNumber={state.failedNumber}
-  //         highscore={state.highscore}
-  //         userCount={state.userCount}
-  //         onSendMessage={handleSendMessage}
-  //         keyValue={key}
-  //         onSubmit={handleSubmit}
-  //         scope={scope}
-  //         messages={messages}
-  //       />
-  //     );
-  //   }
-  // }
 }
 
 export { Home };

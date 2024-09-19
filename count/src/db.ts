@@ -1,6 +1,8 @@
 import { Client } from 'pg';
 import { config } from './config';
 
+console.log(config.databaseURL);
+
 const db = new Client({
   connectionString: config.databaseURL,
   ...(process.env.APP_ENV === 'production' && {
