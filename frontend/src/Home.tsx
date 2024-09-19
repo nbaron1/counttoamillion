@@ -1255,7 +1255,7 @@ const useSubscribe = () => {
   };
 };
 
-const useWebsocket = () => {
+const useWebsocket = (connectionURL: string) => {
   const websocketRef = useRef<WebSocket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const retryTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
@@ -1290,8 +1290,7 @@ const useWebsocket = () => {
       if (websocketRef.current) return;
 
       const accessToken = data.session.access_token;
-
-      const url = `${config.backendWebsocketHost}/v1/websocket?token=${accessToken}`;
+      const url = `${connectionURL}?token=${accessToken}`;
       const websocket = new WebSocket(url);
 
       websocket.addEventListener('open', handleOpen);
@@ -1331,7 +1330,7 @@ const useWebsocket = () => {
         websocketRef.current.close();
       }
     };
-  }, [handleOpen, user]);
+  }, [connectionURL, handleOpen, user]);
 
   return { isLoading, sendMessage };
 };
@@ -1407,7 +1406,9 @@ const useGameStatus = () => {
 };
 
 function Home() {
-  const { sendMessage } = useWebsocket();
+  const { sendMessage } = useWebsocket(
+    `${config.backendWebsocketHost}/v1/websocket`
+  );
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
