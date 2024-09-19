@@ -10,6 +10,10 @@ const app = expressWs(express()).app;
 app.use(cors({ origin: [config.frontendHost], credentials: true }));
 app.use(express.json());
 
+app.get('/health', (req, res) => {
+  res.sendStatus(200);
+});
+
 app.ws('/v1/websocket', async (ws, req) => {
   const token = req.query.token;
 
