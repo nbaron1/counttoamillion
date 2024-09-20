@@ -21,8 +21,13 @@ export default {
 			case '/count': {
 				return handleCount(request, env, ctx);
 			}
+			case '/health': {
+				return new Response('OK', { status: 200 });
+			}
 		}
 
-		return new Response(null, { status: 404 });
+		return new Response(null, {
+			status: 404,
+		});
 	},
 } satisfies ExportedHandler<Env>;
