@@ -39,6 +39,7 @@ jobs:
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
+          command: deploy --compatibility-flags="nodejs_compat"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: backend
 
