@@ -32,12 +32,10 @@ app.ws('/v1/count', async (ws, req) => {
 
   const userId = userResult.user.id;
 
-  const currentCountResult = await db.query(
-    'select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = $1 limit 1',
-    [userId]
-  );
+  const currentCountResult =
+    await db`select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
 
-  const currentAttemptCount = currentCountResult.rows[0].count;
+  const currentAttemptCount = Number(currentCountResult[0].count);
 
   ws.send(
     JSON.stringify({
@@ -55,37 +53,29 @@ app.ws('/v1/count', async (ws, req) => {
           return;
         }
 
-        const currentCountResult = await db.query(
-          'select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = $1 limit 1',
-          [userId]
-        );
+        const currentCountResult =
+          await db`select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
 
-        const currentAttemptCount = Number(currentCountResult.rows[0].count);
+        const currentAttemptCount = Number(currentCountResult[0].count);
         if (!currentAttemptCount) return;
 
         if (currentAttemptCount + 1 != parsedData.value) {
-          await db.query(
-            `WITH inserted AS (
+          await db`WITH inserted AS (
              INSERT INTO attempt (user_id, count) 
-             VALUES ($1, 1) 
+             VALUES (${userId}, 1) 
              RETURNING id
              )
              UPDATE app_user 
              SET current_attempt_id = (SELECT id FROM inserted)
-             WHERE id = $1`,
-            [userId]
-          );
+             WHERE id = ${userId}`;
 
           ws.send(JSON.stringify({ type: 'update-count', value: 1 }));
           return;
         }
 
-        await db.query(
-          `UPDATE attempt 
-           SET count = $1 
-           WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = $2)`,
-          [parsedData.value, userId]
-        );
+        await db`UPDATE attempt 
+           SET count = ${parsedData.value} 
+           WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = ${userId})`;
 
         ws.send(
           JSON.stringify({ type: 'update-count', value: parsedData.value })
