@@ -27,7 +27,7 @@ class_name = "WebSocketCountServer"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["WEBSOCKET_COUNT_SERVER"]
+new_classes = ["WebSocketCountServer"]
 
 # Secret bindings
 # CF_TURNSTILE_SECRET = ""
