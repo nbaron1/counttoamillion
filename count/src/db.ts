@@ -6,7 +6,7 @@ const db = new Client({
   ...(process.env.APP_ENV === 'production' && {
     ssl: {
       rejectUnauthorized: false,
-      ca: process.env.CA_CERT,
+      // ca: process.env.CA_CERT,
     },
   }),
 });
