@@ -1412,7 +1412,7 @@ function Home() {
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
   const [email, setEmail] = useState('');
-  const [isVerificationRequired, setIsVerificationRequired] = useState(false);
+  const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
   console.log('is here!', { isVerificationRequired });
 
