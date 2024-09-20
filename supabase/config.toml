@@ -132,7 +132,7 @@ max_frequency = "1s"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = true
+enable_signup = false
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
@@ -184,18 +184,26 @@ verify_enabled = true
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `slack`, `spotify`, `workos`, `zoom`.
-[auth.external.apple]
-enabled = false
-client_id = ""
-# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
-# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
-skip_nonce_check = false
+# [auth.external.apple]
+# enabled = false
+# client_id = ""
+# # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+# secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+# # Overrides the default auth redirectUrl.
+# redirect_uri = ""
+# # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
+# # or any other third-party OIDC providers.
+# url = ""
+# # If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
+# skip_nonce_check = false
+
+
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+redirect_uri = "http://localhost:3000/auth/v1/callback"
+
 
 # Use Firebase Auth as a third-party provider alongside Supabase Auth.
 [auth.third_party.firebase]

@@ -1412,6 +1412,7 @@ function Home() {
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
+  const [email, setEmail] = useState('');
 
   const subscribe = useSubscribe();
 
@@ -1438,24 +1439,50 @@ function Home() {
     sendMessage(JSON.stringify({ type: 'update-count', value: nextNumber }));
   };
 
+  const handleLoginWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google' });
+  };
+
+  const handleLoginWithEmail = async () => {
+    await supabase.auth.signInWithOtp({ email });
+  };
+
   if (number === null) return;
 
   return (
-    <div className='text-black flex flex-col fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2'>
-      <p className='text-white'>{number}</p>
-      <input
-        type='number'
-        placeholder='Write next number'
-        value={String(nextNumber)}
-        onChange={(event) => {
-          console.log(Number(event.target.value));
-          setNextNumber(Number(event.target.value));
-        }}
-      />
-      <button className='text-white' onClick={handleSubmit}>
-        Submit
-      </button>
-    </div>
+    <>
+      <div className='top-4 right-4 fixed flex flex-col gap-4'>
+        <button onClick={handleLoginWithGoogle} className='text-white'>
+          sign in google
+        </button>
+        <div className='flex flex-col gap-2'>
+          <input
+            type='email'
+            className='text-black'
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <button className='text-white' onClick={handleLoginWithEmail}>
+            send magic link
+          </button>
+        </div>
+      </div>
+      <div className='text-black flex flex-col fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2'>
+        <p className='text-white'>{number}</p>
+        <input
+          type='number'
+          placeholder='Write next number'
+          value={String(nextNumber)}
+          onChange={(event) => {
+            console.log(Number(event.target.value));
+            setNextNumber(Number(event.target.value));
+          }}
+        />
+        <button className='text-white' onClick={handleSubmit}>
+          Submit
+        </button>
+      </div>
+    </>
   );
 }
 
