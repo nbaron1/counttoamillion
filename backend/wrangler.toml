@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "hidden-rice-a443"
+name = "counttoamillion-backend"
 main = "src/index.ts"
 compatibility_date = "2024-09-19"
 compatibility_flags = ["nodejs_compat_v2"]
