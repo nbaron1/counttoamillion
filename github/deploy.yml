@@ -1,20 +1,48 @@
 name: Deploy
 on: [push]
 jobs:
-  # deploy-app:
-  #   runs-on: ubuntu-latest
-  #    - name: Deploy the backend to DigitalOcean
-  #       uses: digitalocean/app_action/deploy@v2
-  #       with:
-  #         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-  #     - name: Deploy the frontend to Cloudflare pages
-  #       uses: cloudflare/pages-action@1.0.0
-  #       with:
-  #        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  #         accountId: YOUR_ACCOUNT_ID
-  #         projectName: YOUR_PROJECT_NAME
-  #         directory: YOUR_BUILD_OUTPUT_DIRECTORY
-  #         gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-  #         branch: main
-  #         workingDirectory: frontend
-  #         wranglerVersion: '3'
+  migrate-db:
+    runs-on: ubuntu-latest
+    name: Migrate Database
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+
+      - name: Run Migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+          supabase db push
+  deploy-worker:
+    needs: migrate-db
+    name: Deploy Worker
+    runs-on: ubuntu-latest
+    working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [deploy-worker, migrate-db]
+    runs-on: ubuntu-latest
+    working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=counttoamillion
