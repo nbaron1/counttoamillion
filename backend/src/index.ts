@@ -88,11 +88,7 @@ export class WebSocketCountServer extends DurableObject<Env> {
 					return;
 				}
 
-				// check with turnstile api to verify key
-				// if key is valid, set verificationRequired to false & send verified message back
 				try {
-					console.log('verifying', { response: parsedData.token, secret: this.env.CF_TURNSTILE_SECRET });
-
 					const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
 						method: 'POST',
 						body: JSON.stringify({ response: parsedData.token, secret: this.env.CF_TURNSTILE_SECRET }),
@@ -110,14 +106,19 @@ export class WebSocketCountServer extends DurableObject<Env> {
 					if (!body || typeof body !== 'object' || !('success' in body) || body.success !== true) {
 						throw new Error('Verification failed');
 					}
-					console.log('verified!!!');
+
+					this.sessions.set(ws, {
+						userId,
+						verificationRequired: false,
+						requestsSinceVerification: 0,
+					});
+
 					ws.send(JSON.stringify({ type: 'verified' }));
 				} catch (error) {
 					ws.send(JSON.stringify({ type: 'verification-required' }));
 				}
 
-				// console.log(response);
-				// const { success } = await response.json();
+				break;
 			}
 			case 'update-count': {
 				if (verificationRequired) {
@@ -197,7 +198,7 @@ export class WebSocketCountServer extends DurableObject<Env> {
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const { pathname } = new URL(request.url);
-		console.log({ pathname });
+
 		switch (pathname) {
 			case '/count': {
 				return handleCount(request, env, ctx);

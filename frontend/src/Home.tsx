@@ -923,7 +923,7 @@ function Game({
   const highestNumber = useMemo(() => Math.max(...elements), [elements]);
 
   const elementsSorted = Array.from(elements).sort((a, b) => a - b);
-  console.log('is here!');
+
   return (
     <div ref={scope}>
       <a
@@ -1095,8 +1095,6 @@ function reducer(state: State, action: Action): State {
       };
     }
     case 'update-user-count': {
-      console.log('Updating user count', action.value);
-
       return {
         ...state,
         userCount: action.value,
@@ -1267,7 +1265,6 @@ const useWebsocket = (connectionURL: string) => {
 
   const handleOpen = useCallback(() => {
     setIsLoading(false);
-    console.log('is connected!');
 
     retryTimeoutsRef.current.forEach((timeout) => {
       clearTimeout(timeout);
@@ -1280,24 +1277,21 @@ const useWebsocket = (connectionURL: string) => {
 
   useEffect(() => {
     const connectWebSocket = async () => {
-      console.log('1', user);
-
       if (!user) return; // Only connect if user is authenticated
-      console.log('2');
+
       const { data, error } = await supabase.auth.getSession();
-      console.log('3');
+
       if (error) {
         console.error('Error getting session:', error);
         return;
       }
-      console.log('4');
 
       if (!data.session) return;
       if (websocketRef.current) return;
 
       const accessToken = data.session.access_token;
       const url = `${connectionURL}?token=${accessToken}`;
-      console.log({ url });
+
       const websocket = new WebSocket(url);
 
       websocket.addEventListener('open', handleOpen);
@@ -1420,26 +1414,31 @@ function Home() {
   const [email, setEmail] = useState('');
   const [isVerificationRequired, setIsVerificationRequired] = useState(false);
   const subscribe = useSubscribe();
+  console.log('is here!', { isVerificationRequired });
 
   useEffect(() => {
     const unsubscribe = subscribe('message', (data) => {
       const parsedData = JSON.parse(data);
-      console.log('data', data);
+
       switch (parsedData.type) {
         case 'update-count': {
           setNumber(parsedData.value);
+          break;
         }
         case 'verification-required': {
+          console.log('verification required');
           setIsVerificationRequired(true);
+          break;
         }
         case 'verified': {
           setIsVerificationRequired(false);
+          break;
         }
       }
     });
 
     return unsubscribe;
-  });
+  }, [subscribe, setIsVerificationRequired]);
 
   if (!gameStatus) {
     return (
@@ -1450,12 +1449,10 @@ function Home() {
   }
 
   const handleSubmit = () => {
-    // console.log({ nextNumber });
     sendMessage(JSON.stringify({ type: 'update-count', value: nextNumber }));
   };
 
   const handleSuccess = (token: string) => {
-    console.log('success', { token });
     sendMessage(JSON.stringify({ type: 'verify', token }));
   };
 
@@ -1472,12 +1469,12 @@ function Home() {
   return (
     <>
       <div className='top-4 right-4 fixed flex flex-col gap-4'>
-        {(isVerificationRequired || true) && (
+        {isVerificationRequired && (
           <Turnstile
-            siteKey='0x4AAAAAAAkYlmE__LNhyK4Y'
-            // siteKey='0x4AAAAAAAkYlmE__LNhyK4Y'
+            // todo: handle
             // onError={() => setStatus('error')}
             // onExpire={() => setStatus('expired')}
+            siteKey={config.turnstileSiteKey}
             onSuccess={handleSuccess}
           />
         )}
