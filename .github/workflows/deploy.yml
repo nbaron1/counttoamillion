@@ -35,18 +35,12 @@ jobs:
     name: Deploy Worker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
       - uses: actions/checkout@v4
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
-          command: deploy ./src/index.ts
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          working-directory: backend
+          workingDirectory: backend
 
   deploy-frontend:
     name: Deploy Frontend
@@ -60,4 +54,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=counttoamillion
-          working-directory: ./frontend
+          workingDirectory: frontend
