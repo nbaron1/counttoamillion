@@ -363,7 +363,9 @@ function Messages({
     >
       {messages.map((message) => (
         <Message
-          author={message.author}
+          // author={message.author}
+          // todo: fix!!
+          author='Placeholder'
           message={message.message}
           key={message.id}
         />
