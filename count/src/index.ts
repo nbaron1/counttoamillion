@@ -14,7 +14,7 @@ app.get('/health', (req, res) => {
   res.sendStatus(200);
 });
 
-app.ws('/v1/websocket', async (ws, req) => {
+app.ws('/v1/count', async (ws, req) => {
   const token = req.query.token;
 
   if (typeof token !== 'string') {
