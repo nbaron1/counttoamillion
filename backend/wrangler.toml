@@ -20,6 +20,15 @@ compatibility_flags = ["nodejs_compat_v2"]
 FRONTEND_HOST= "counttoamillion.com"
 SUPABASE_URL = "https://uxljxvtvtavsxmvacdyo.supabase.co"
 
+[[durable_objects.bindings]]
+name = "WEBSOCKET_COUNT_SERVER"
+class_name = "WebSocketCountServer"
+
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WEBSOCKET_COUNT_SERVER"]
+
 # Secret bindings
 # CF_TURNSTILE_SECRET = ""
 # DATABASE_URL = ""

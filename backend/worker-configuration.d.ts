@@ -6,4 +6,5 @@ interface Env {
 	CF_TURNSTILE_SECRET: string;
 	SUPABASE_URL: string;
 	SUPABASE_SECRET_KEY: string;
+	WEBSOCKET_COUNT_SERVER: DurableObjectNamespace<WebSocketHibernationServer>;
 }

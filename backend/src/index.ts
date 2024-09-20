@@ -11,7 +11,115 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
+import { DurableObject } from 'cloudflare:workers';
 import { handleCount } from './count';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database } from './database.types';
+import postgres from 'postgres';
+
+export class WebSocketCountServer extends DurableObject<Env> {
+	supabase: SupabaseClient<Database>;
+	sql: postgres.Sql;
+	sessions: Map<WebSocket, string> = new Map();
+
+	constructor(state: DurableObjectState, env: Env) {
+		super(state, env);
+		this.supabase = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+		this.sql = postgres(this.env.DATABASE_URL);
+	}
+
+	async fetch(request: Request): Promise<Response> {
+		// Creates two ends of a WebSocket connection.
+		const webSocketPair = new WebSocketPair();
+		const [client, server] = Object.values(webSocketPair);
+
+		const token = new URL(request.url).searchParams.get('token');
+
+		if (typeof token !== 'string') {
+			server.close(1008, 'Unauthorized');
+			return new Response('Unauthorized', { status: 401 });
+		}
+
+		this.ctx.acceptWebSocket(server);
+
+		const { data: userResult } = await this.supabase.auth.getUser(token);
+
+		if (!userResult.user) {
+			server.close(1008, 'Unauthorized');
+			return new Response('Unauthorized', { status: 401 });
+		}
+
+		const userId = userResult.user.id;
+
+		const currentCountResult = await this
+			.sql`select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
+
+		const currentCount = Number(currentCountResult[0].count);
+
+		server.send(
+			JSON.stringify({
+				type: 'update-count',
+				value: currentCount,
+			})
+		);
+
+		this.sessions.set(server, userId);
+
+		return new Response(null, {
+			status: 101,
+			webSocket: client,
+		});
+	}
+
+	async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string) {
+		const parsedData = JSON.parse(message.toString());
+		const userId = this.sessions.get(ws);
+
+		if (!userId) {
+			ws.close(1008, 'Unauthorized');
+			return;
+		}
+
+		switch (parsedData.type) {
+			case 'update-count': {
+				if (typeof parsedData.value !== 'number') {
+					return;
+				}
+
+				// todo: refactor into one userId
+				const currentCountResult = await this
+					.sql`select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
+
+				const currentCount = Number(currentCountResult[0].count);
+
+				if (currentCount + 1 != parsedData.value) {
+					await this.sql`WITH inserted AS (
+				       INSERT INTO attempt (user_id, count)
+				       VALUES (${userId}, 1)
+				       RETURNING id
+				       )
+				       UPDATE app_user
+				       SET current_attempt_id = (SELECT id FROM inserted)
+				       WHERE id = ${userId}`;
+
+					ws.send(JSON.stringify({ type: 'update-count', value: 1 }));
+					return;
+				}
+
+				await this.sql`UPDATE attempt
+				     SET count = ${parsedData.value}
+				     WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = ${userId})`;
+
+				ws.send(JSON.stringify({ type: 'update-count', value: parsedData.value }));
+			}
+		}
+	}
+
+	async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
+		// If the client closes the connection, the runtime will invoke the webSocketClose() handler.
+		ws.close(code, 'Durable Object is closing WebSocket');
+	}
+}
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
