@@ -39,9 +39,9 @@ jobs:
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
-          main: ./src/index.ts
+          command: deploy ./src/index.ts
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          working-directory: ./backend
+          working-directory: backend
 
   deploy-frontend:
     name: Deploy Frontend
