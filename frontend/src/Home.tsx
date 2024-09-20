@@ -1416,9 +1416,7 @@ const useGameStatus = () => {
 function Home() {
   console.log(config.backendWebsocketHost);
 
-  const { sendMessage } = useWebsocket(
-    `${config.backendWebsocketHost}/v1/count`
-  );
+  const { sendMessage } = useWebsocket(`${config.backendWebsocketHost}/count`);
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);

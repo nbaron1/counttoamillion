@@ -18,7 +18,7 @@ export default {
 		const { pathname } = new URL(request.url);
 		console.log({ pathname });
 		switch (pathname) {
-			case '/v1/count': {
+			case '/count': {
 				return handleCount(request, env, ctx);
 			}
 			case '/health': {
