@@ -57,15 +57,15 @@ jobs:
       - name: Install Dependencies
         run: npm install
         working-directory: frontend
+      - name: Build
+        run: npm run build
+        working-directory: frontend
         env:
           PUBLIC_BACKEND_HOST: https://api.counttoamillion.com
           PUBLIC_BACKEND_WEBSOCKET_HOST: wss://api.counttoamillion.com
           PUBLIC_CF_TURNSTILE_KEY: 123,
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      - name: Build
-        run: npm run build
-        working-directory: frontend
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
