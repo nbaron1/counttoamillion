@@ -29,20 +29,20 @@ jobs:
     needs: migrate-db
     name: Deploy Worker
     runs-on: ubuntu-latest
-    working-directory: ./backend
     steps:
       - uses: actions/checkout@v4
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
+        working-directory: ./backend
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   deploy-frontend:
     name: Deploy Frontend
     needs: [deploy-worker, migrate-db]
     runs-on: ubuntu-latest
-    working-directory: ./frontend
     steps:
       - uses: actions/checkout@v4
+        working-directory: ./frontend
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
