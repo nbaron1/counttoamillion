@@ -48,11 +48,25 @@ jobs:
     needs: [deploy-worker, migrate-db]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Dependencies
+        run: npm install
+        working-directory: frontend
+      - name: Build
+        run: npm run build
+        working-directory: frontend
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: f24d1f62bfe4b558707bd595d5b952da
+          workingDirectory: frontend
+          branch: main
           projectName: counttoamillion
           directory: dist
           wranglerVersion: '3'
