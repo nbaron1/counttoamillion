@@ -1387,7 +1387,6 @@ const useGameStatus = () => {
 
   const getGameStatus = useCallback(async () => {
     try {
-      // return data.data;
       const { data } = await supabase.from('game_status').select('*');
 
       // todo: sentry error handling
@@ -1414,21 +1413,29 @@ const useGameStatus = () => {
 };
 
 function Home() {
-  console.log(config.backendWebsocketHost);
-
   const { sendMessage } = useWebsocket(`${config.backendWebsocketHost}/count`);
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
   const [email, setEmail] = useState('');
-
+  const [isVerificationRequired, setIsVerificationRequired] = useState(false);
   const subscribe = useSubscribe();
 
   useEffect(() => {
     const unsubscribe = subscribe('message', (data) => {
       const parsedData = JSON.parse(data);
-      setNumber(parsedData.value);
-      console.log('Data:', parsedData);
+      console.log('data', data);
+      switch (parsedData.type) {
+        case 'update-count': {
+          setNumber(parsedData.value);
+        }
+        case 'verification-required': {
+          setIsVerificationRequired(true);
+        }
+        case 'verified': {
+          setIsVerificationRequired(false);
+        }
+      }
     });
 
     return unsubscribe;
@@ -1447,6 +1454,11 @@ function Home() {
     sendMessage(JSON.stringify({ type: 'update-count', value: nextNumber }));
   };
 
+  const handleSuccess = (token: string) => {
+    console.log('success', { token });
+    sendMessage(JSON.stringify({ type: 'verify', token }));
+  };
+
   const handleLoginWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({ provider: 'google' });
   };
@@ -1460,6 +1472,15 @@ function Home() {
   return (
     <>
       <div className='top-4 right-4 fixed flex flex-col gap-4'>
+        {(isVerificationRequired || true) && (
+          <Turnstile
+            siteKey='0x4AAAAAAAkYlmE__LNhyK4Y'
+            // siteKey='0x4AAAAAAAkYlmE__LNhyK4Y'
+            // onError={() => setStatus('error')}
+            // onExpire={() => setStatus('expired')}
+            onSuccess={handleSuccess}
+          />
+        )}
         <button onClick={handleLoginWithGoogle} className='text-white'>
           sign in google
         </button>

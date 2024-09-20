@@ -20,7 +20,7 @@ import postgres from 'postgres';
 export class WebSocketCountServer extends DurableObject<Env> {
 	supabase: SupabaseClient<Database>;
 	sql: postgres.Sql;
-	sessions: Map<WebSocket, string> = new Map();
+	sessions: Map<WebSocket, { userId: string; verificationRequired: boolean; requestsSinceVerification: number }> = new Map();
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -63,7 +63,7 @@ export class WebSocketCountServer extends DurableObject<Env> {
 			})
 		);
 
-		this.sessions.set(server, userId);
+		this.sessions.set(server, { userId, verificationRequired: true, requestsSinceVerification: 0 });
 
 		return new Response(null, {
 			status: 101,
@@ -73,15 +73,58 @@ export class WebSocketCountServer extends DurableObject<Env> {
 
 	async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string) {
 		const parsedData = JSON.parse(message.toString());
-		const userId = this.sessions.get(ws);
+		const session = this.sessions.get(ws);
 
-		if (!userId) {
+		if (!session) {
 			ws.close(1008, 'Unauthorized');
 			return;
 		}
 
+		const { userId, verificationRequired, requestsSinceVerification } = session;
+
 		switch (parsedData.type) {
+			case 'verify': {
+				if (typeof parsedData.token !== 'string') {
+					return;
+				}
+
+				// check with turnstile api to verify key
+				// if key is valid, set verificationRequired to false & send verified message back
+				try {
+					console.log('verifying', { response: parsedData.token, secret: this.env.CF_TURNSTILE_SECRET });
+
+					const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+						method: 'POST',
+						body: JSON.stringify({ response: parsedData.token, secret: this.env.CF_TURNSTILE_SECRET }),
+						headers: {
+							'Content-Type': 'application/json',
+						},
+					});
+
+					if (!response.ok) {
+						throw new Error('Verification failed');
+					}
+
+					const body = await response.json();
+
+					if (!body || typeof body !== 'object' || !('success' in body) || body.success !== true) {
+						throw new Error('Verification failed');
+					}
+					console.log('verified!!!');
+					ws.send(JSON.stringify({ type: 'verified' }));
+				} catch (error) {
+					ws.send(JSON.stringify({ type: 'verification-required' }));
+				}
+
+				// console.log(response);
+				// const { success } = await response.json();
+			}
 			case 'update-count': {
+				if (verificationRequired) {
+					ws.send(JSON.stringify({ type: 'verification-required' }));
+					return;
+				}
+
 				if (typeof parsedData.value !== 'number') {
 					return;
 				}
@@ -103,6 +146,21 @@ export class WebSocketCountServer extends DurableObject<Env> {
 				       WHERE id = ${userId}`;
 
 					ws.send(JSON.stringify({ type: 'update-count', value: 1 }));
+
+					const newRequestsSinceVerification = requestsSinceVerification + 1;
+					// todo: use env variable for max requests per verification
+					const isVerificationRequired = newRequestsSinceVerification >= 5;
+
+					if (isVerificationRequired) {
+						ws.send(JSON.stringify({ type: 'verification-required' }));
+					}
+
+					this.sessions.set(ws, {
+						userId,
+						verificationRequired: isVerificationRequired,
+						requestsSinceVerification: newRequestsSinceVerification,
+					});
+
 					return;
 				}
 
@@ -111,6 +169,21 @@ export class WebSocketCountServer extends DurableObject<Env> {
 				     WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = ${userId})`;
 
 				ws.send(JSON.stringify({ type: 'update-count', value: parsedData.value }));
+
+				const newRequestsSinceVerification = requestsSinceVerification + 1;
+
+				// todo: use env variable for max requests per verification
+				const isVerificationRequired = newRequestsSinceVerification >= 5;
+
+				if (isVerificationRequired) {
+					ws.send(JSON.stringify({ type: 'verification-required' }));
+				}
+
+				this.sessions.set(ws, {
+					userId,
+					verificationRequired: isVerificationRequired,
+					requestsSinceVerification: newRequestsSinceVerification,
+				});
 			}
 		}
 	}
