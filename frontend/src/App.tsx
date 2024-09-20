@@ -1,23 +1,10 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { Home } from './Home';
 import { AuthProvider } from './context/Auth';
-import { Leaderboard } from './Leaderboard';
+import { Home } from './Home';
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Home />,
-  },
-  {
-    path: '/leaderboard',
-    element: <Leaderboard />,
-  },
-]);
-
-export function App() {
+export function AppHome() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <Home />
     </AuthProvider>
   );
 }

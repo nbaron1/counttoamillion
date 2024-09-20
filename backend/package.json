@@ -1,0 +1,23 @@
+{
+	"name": "hidden-rice-a443",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev --port 5000",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.5.2",
+		"@cloudflare/workers-types": "^4.20240919.0",
+		"typescript": "^5.5.2",
+		"vitest": "2.0.5",
+		"wrangler": "^3.60.3"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.45.4",
+		"postgres": "^3.4.4"
+	}
+}

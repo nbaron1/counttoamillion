@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
+import { AuthProvider } from './context/Auth';
 
 const PAGE_SIZE = 10;
 
@@ -40,7 +41,7 @@ function LeaderboardPage({ page }: { page: number }) {
   ));
 }
 
-export function Leaderboard() {
+export function LeaderboardApp() {
   const [pages, setPages] = useState(0);
   const [maxCount, setMaxCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,20 +65,22 @@ export function Leaderboard() {
   }, []);
 
   return (
-    <div className='flex flex-col'>
-      <input
-        value={searchTerm}
-        onChange={(event) => setSearchTerm(event.target.value)}
-        placeholder='Search for a user'
-      />
+    <AuthProvider>
       <div className='flex flex-col'>
-        {Array.from({ length: pages + 1 }).map((_, index) => (
-          <LeaderboardPage page={index} key={index} />
-        ))}
+        <input
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder='Search for a user'
+        />
+        <div className='flex flex-col'>
+          {Array.from({ length: pages + 1 }).map((_, index) => (
+            <LeaderboardPage page={index} key={index} />
+          ))}
+        </div>
+        <button className='bg-gray-600 text-white px-3 py-2 rounded-md'>
+          Load more
+        </button>
       </div>
-      <button className='bg-gray-600 text-white px-3 py-2 rounded-md'>
-        Load more
-      </button>
-    </div>
+    </AuthProvider>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { type User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Spinner } from '../Home';
 
@@ -37,6 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    console.log('is here!');
+
     const handleAnonymousAuth = async () => {
       const response = await supabase.auth.signInAnonymously();
       console.log({ response });

@@ -7,7 +7,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { AnimationScope, motion } from 'framer-motion';
+import { type AnimationScope, motion } from 'framer-motion';
+
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import './dialog.css';
@@ -16,7 +17,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { UsernamePopover } from './UsernamePopover';
 import { supabase } from './lib/supabase';
 import { config } from './lib/config';
-import { useUser } from './context/Auth';
+import { AuthProvider, useUser } from './context/Auth';
 
 function ChatIcon() {
   return (
@@ -72,16 +73,16 @@ function FailedNumberElement({ number }: { number: number }) {
   );
 }
 
-const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
+const WEBSOCKET_HOST = import.meta.env.PUBLIC_BACKEND_WEBSOCKET_HOST;
 
 if (!WEBSOCKET_HOST) {
-  throw new Error('VITE_BACKEND_HOST not found');
+  throw new Error('PUBLIC_BACKEND_WEBSOCKET_HOST not found');
 }
 
-const BACKEND_HOST = import.meta.env.VITE_BACKEND_HOST;
+const BACKEND_HOST = import.meta.env.PUBLIC_BACKEND_HOST;
 
 if (!BACKEND_HOST) {
-  throw new Error('VITE_BACKEND_HOST not found');
+  throw new Error('PUBLIC_BACKEND_HOST not found');
 }
 
 const useAttempts = ({
@@ -1277,24 +1278,29 @@ const useWebsocket = (connectionURL: string) => {
 
   useEffect(() => {
     const connectWebSocket = async () => {
+      console.log('1', user);
+
       if (!user) return; // Only connect if user is authenticated
-
+      console.log('2');
       const { data, error } = await supabase.auth.getSession();
-
+      console.log('3');
       if (error) {
         console.error('Error getting session:', error);
         return;
       }
+      console.log('4');
 
       if (!data.session) return;
       if (websocketRef.current) return;
 
       const accessToken = data.session.access_token;
       const url = `${connectionURL}?token=${accessToken}`;
+      console.log({ url });
       const websocket = new WebSocket(url);
 
       websocket.addEventListener('open', handleOpen);
-      websocket.addEventListener('close', () => {
+      websocket.addEventListener('close', (event) => {
+        console.log(event);
         if (websocketRef.current) {
           websocketRef.current.removeEventListener('open', handleOpen);
         }
@@ -1406,9 +1412,9 @@ const useGameStatus = () => {
 };
 
 function Home() {
-  const { sendMessage } = useWebsocket(
-    `${config.backendWebsocketHost}/v1/websocket`
-  );
+  console.log(config.backendWebsocketHost);
+
+  const { sendMessage } = useWebsocket(`${config.backendWebsocketHost}/count`);
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
@@ -1457,6 +1463,7 @@ function Home() {
         </button>
         <div className='flex flex-col gap-2'>
           <input
+            name='email'
             type='email'
             className='text-black'
             value={email}
