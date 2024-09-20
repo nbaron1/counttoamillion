@@ -49,6 +49,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install
+        run: npm install
+        working-directory: frontend
       - name: Build
         run: npm run build
         working-directory: frontend
