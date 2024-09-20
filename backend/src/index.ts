@@ -16,9 +16,9 @@ import { handleCount } from './count';
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const { pathname } = new URL(request.url);
-
+		console.log({ pathname });
 		switch (pathname) {
-			case '/count': {
+			case '/v1/count': {
 				return handleCount(request, env, ctx);
 			}
 			case '/health': {
