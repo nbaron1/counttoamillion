@@ -79,12 +79,6 @@ if (!WEBSOCKET_HOST) {
   throw new Error('PUBLIC_BACKEND_WEBSOCKET_HOST not found');
 }
 
-const BACKEND_HOST = import.meta.env.PUBLIC_BACKEND_HOST;
-
-if (!BACKEND_HOST) {
-  throw new Error('PUBLIC_BACKEND_HOST not found');
-}
-
 const useAttempts = ({
   filter,
   page,
@@ -97,26 +91,26 @@ const useAttempts = ({
   >(null);
   const [hasNextPage, setHasNextPage] = useState(false);
 
-  useEffect(() => {
-    const fetchAttempts = async () => {
-      try {
-        const response = await fetch(
-          `${BACKEND_HOST}/v1/attempts?filter=${filter}&page=${page}`
-        );
-        const { data, hasNextPage } = await response.json();
+  // useEffect(() => {
+  //   const fetchAttempts = async () => {
+  //     try {
+  //     //   const response = await fetch(
+  //     //     `${BACKEND_HOST}/v1/attempts?filter=${filter}&page=${page}`
+  //     //   );
+  //     //   const { data, hasNextPage } = await response.json();
 
-        console.log({ hasNextPage });
+  //     //   console.log({ hasNextPage });
 
-        setData(data);
-        setHasNextPage(hasNextPage);
-      } catch (error) {
-        // todo: auto retry after 1 second
-        console.error('Error fetching attempts', error);
-      }
-    };
+  //     //   setData(data);
+  //     //   setHasNextPage(hasNextPage);
+  //     // } catch (error) {
+  //     //   // todo: auto retry after 1 second
+  //     //   console.error('Error fetching attempts', error);
+  //     // }
+  //   };
 
-    fetchAttempts();
-  }, [filter, page]);
+  //   fetchAttempts();
+  // }, [filter, page]);
 
   return { data, hasNextPage };
 };
@@ -808,30 +802,26 @@ function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
   };
 
   const handleSuccess = async (token: string) => {
-    try {
-      const response = await fetch(`${BACKEND_HOST}/v1/verify`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({ token }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to verify');
-      }
-
-      const data = await response.json();
-
-      if (!('success' in data) || !data.success) {
-        return;
-      }
-
-      dispatch('verify');
-    } catch (error) {
-      // todo: sentry error handling
-      console.error(error);
-    }
+    // try {
+    //   const response = await fetch(`${BACKEND_HOST}/v1/verify`, {
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     method: 'POST',
+    //     body: JSON.stringify({ token }),
+    //   });
+    //   if (!response.ok) {
+    //     throw new Error('Failed to verify');
+    //   }
+    //   const data = await response.json();
+    //   if (!('success' in data) || !data.success) {
+    //     return;
+    //   }
+    //   dispatch('verify');
+    // } catch (error) {
+    //   // todo: sentry error handling
+    //   console.error(error);
+    // }
   };
 
   if (!state.verified) {
