@@ -3,6 +3,8 @@ name = "counttoamillion-worker"
 main = "src/index.ts"
 compatibility_date = "2024-09-09"
 compatibility_flags = ["nodejs_compat_v2"]
+route = { pattern = "api.counttoamillion.com", custom_domain = true }
+
 # tail_consumers = [{service = "counttoamillion-worker-tail"}]
 
 # Automatically place your workloads in an optimal location to minimize latency.
