@@ -201,7 +201,7 @@ export default {
 
 		switch (pathname) {
 			// if we just use /count the uBlock Origin chrome extension will block the request for some reason
-			case '/user-count': {
+			case '/score': {
 				return handleCount(request, env, ctx);
 			}
 			case '/health': {
