@@ -6,6 +6,8 @@ create table app_user (
   high_score bigint not null default 1
 );
 
+create index idx_app_user_high_score on app_user(high_score);
+
 create table attempt (
   id bigserial primary key,
   created_at timestamp not null default CURRENT_TIMESTAMP,
