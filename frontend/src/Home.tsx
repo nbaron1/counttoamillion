@@ -79,47 +79,41 @@ if (!WEBSOCKET_HOST) {
   throw new Error('PUBLIC_BACKEND_WEBSOCKET_HOST not found');
 }
 
-const BACKEND_HOST = import.meta.env.PUBLIC_BACKEND_HOST;
+// const useAttempts = ({
+//   filter,
+//   page,
+// }: {
+//   filter: AttemptFilter;
+//   page: number;
+// }) => {
+//   const [data, setData] = useState<
+//     { id: number; created_at: string; count: number }[] | null
+//   >(null);
+//   const [hasNextPage, setHasNextPage] = useState(false);
 
-if (!BACKEND_HOST) {
-  throw new Error('PUBLIC_BACKEND_HOST not found');
-}
+//   useEffect(() => {
+//     const fetchAttempts = async () => {
+//       try {
+//         const response = await fetch(
+//           `${BACKEND_HOST}/v1/attempts?filter=${filter}&page=${page}`
+//         );
+//         const { data, hasNextPage } = await response.json();
 
-const useAttempts = ({
-  filter,
-  page,
-}: {
-  filter: AttemptFilter;
-  page: number;
-}) => {
-  const [data, setData] = useState<
-    { id: number; created_at: string; count: number }[] | null
-  >(null);
-  const [hasNextPage, setHasNextPage] = useState(false);
+//         console.log({ hasNextPage });
 
-  useEffect(() => {
-    const fetchAttempts = async () => {
-      try {
-        const response = await fetch(
-          `${BACKEND_HOST}/v1/attempts?filter=${filter}&page=${page}`
-        );
-        const { data, hasNextPage } = await response.json();
+//         setData(data);
+//         setHasNextPage(hasNextPage);
+//       } catch (error) {
+//         // todo: auto retry after 1 second
+//         console.error('Error fetching attempts', error);
+//       }
+//     };
 
-        console.log({ hasNextPage });
+//     fetchAttempts();
+//   }, [filter, page]);
 
-        setData(data);
-        setHasNextPage(hasNextPage);
-      } catch (error) {
-        // todo: auto retry after 1 second
-        console.error('Error fetching attempts', error);
-      }
-    };
-
-    fetchAttempts();
-  }, [filter, page]);
-
-  return { data, hasNextPage };
-};
+//   return { data, hasNextPage };
+// };
 
 type Attempt = { count: number; id: number; created_at: string };
 
@@ -168,77 +162,77 @@ function PreviousAttempt({ attempt }: { attempt: Attempt }) {
   );
 }
 
-function PreviousAttemptDialogPage({
-  filter,
-  page,
-  isLastPage,
-  onLoadMore,
-}: {
-  filter: AttemptFilter;
-  page: number;
-  isLastPage: boolean;
-  onLoadMore: () => void;
-}) {
-  const { data, hasNextPage } = useAttempts({ page, filter });
+// function PreviousAttemptDialogPage({
+//   filter,
+//   page,
+//   isLastPage,
+//   onLoadMore,
+// }: {
+//   filter: AttemptFilter;
+//   page: number;
+//   isLastPage: boolean;
+//   onLoadMore: () => void;
+// }) {
+//   const { data, hasNextPage } = useAttempts({ page, filter });
 
-  if (data === null && !isLastPage) return null;
+//   if (data === null && !isLastPage) return null;
 
-  if (data === null) {
-    return (
-      <div className='mx-auto h-72'>
-        <div className='animate-spin w-10 h-10 border-4 border-solid border-gray-400 border-b-transparent rounded-[50%]'></div>
-      </div>
-    );
-  }
+//   if (data === null) {
+//     return (
+//       <div className='mx-auto h-72'>
+//         <div className='animate-spin w-10 h-10 border-4 border-solid border-gray-400 border-b-transparent rounded-[50%]'></div>
+//       </div>
+//     );
+//   }
 
-  return (
-    <div className='flex flex-col gap-4'>
-      {data.map((attempt) => (
-        <PreviousAttempt attempt={attempt} key={attempt.id} />
-      ))}
+//   return (
+//     <div className='flex flex-col gap-4'>
+//       {data.map((attempt) => (
+//         <PreviousAttempt attempt={attempt} key={attempt.id} />
+//       ))}
 
-      {isLastPage && hasNextPage && (
-        <button
-          className='bg-gray-800 py-3 text-gray-50 border border-gray-700 rounded'
-          type='button'
-          onClick={onLoadMore}
-        >
-          Load more
-        </button>
-      )}
-    </div>
-  );
-}
+//       {isLastPage && hasNextPage && (
+//         <button
+//           className='bg-gray-800 py-3 text-gray-50 border border-gray-700 rounded'
+//           type='button'
+//           onClick={onLoadMore}
+//         >
+//           Load more
+//         </button>
+//       )}
+//     </div>
+//   );
+// }
 
-function PreviousAttemptDialogContent({
-  type,
-  isEnabled,
-}: {
-  type: AttemptFilter;
-  isEnabled: boolean;
-}) {
-  const [pages, setPages] = useState(1);
+// function PreviousAttemptDialogContent({
+//   type,
+//   isEnabled,
+// }: {
+//   type: AttemptFilter;
+//   isEnabled: boolean;
+// }) {
+//   const [pages, setPages] = useState(1);
 
-  return (
-    <>
-      <div
-        className={`flex flex-col sm:max-h-96 overflow-y-scroll gap-4 ${
-          !isEnabled ? 'hidden' : ''
-        }`}
-      >
-        {Array.from({ length: pages }).map((_, i) => (
-          <PreviousAttemptDialogPage
-            key={i}
-            filter={type}
-            page={i + 1}
-            onLoadMore={() => setPages(pages + 1)}
-            isLastPage={i + 1 === pages}
-          />
-        ))}
-      </div>
-    </>
-  );
-}
+//   return (
+//     <>
+//       <div
+//         className={`flex flex-col sm:max-h-96 overflow-y-scroll gap-4 ${
+//           !isEnabled ? 'hidden' : ''
+//         }`}
+//       >
+//         {Array.from({ length: pages }).map((_, i) => (
+//           <PreviousAttemptDialogPage
+//             key={i}
+//             filter={type}
+//             page={i + 1}
+//             onLoadMore={() => setPages(pages + 1)}
+//             isLastPage={i + 1 === pages}
+//           />
+//         ))}
+//       </div>
+//     </>
+//   );
+// }
 
 type AttemptFilter = 'latest' | 'top';
 
@@ -752,140 +746,140 @@ const initialVerificationState: VerificationState = {
   verified: false,
 };
 
-function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
-  const [inputValue, setInputValue] = useState('');
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [state, dispatch] = useReducer(
-    verificationReducer,
-    initialVerificationState
-  );
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+// function InputField({ onSubmit }: { onSubmit: (value: number) => void }) {
+//   const [inputValue, setInputValue] = useState('');
+//   const inputRef = useRef<HTMLInputElement | null>(null);
+//   const [state, dispatch] = useReducer(
+//     verificationReducer,
+//     initialVerificationState
+//   );
+//   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSubmit = () => {
-    const inputNumberValue = Number.parseInt(inputValue, 10);
+//   const handleSubmit = () => {
+//     const inputNumberValue = Number.parseInt(inputValue, 10);
 
-    // TODO: Error handling
-    if (Number.isNaN(inputNumberValue)) {
-      console.error('Input is not a number', { input: inputValue });
-      return;
-    }
+//     // TODO: Error handling
+//     if (Number.isNaN(inputNumberValue)) {
+//       console.error('Input is not a number', { input: inputValue });
+//       return;
+//     }
 
-    const isAnInteger = Number.isInteger(inputNumberValue);
+//     const isAnInteger = Number.isInteger(inputNumberValue);
 
-    // TODO: Error handling
-    if (!isAnInteger) {
-      console.error('Input is not an integer', { input: inputValue });
-      return;
-    }
+//     // TODO: Error handling
+//     if (!isAnInteger) {
+//       console.error('Input is not an integer', { input: inputValue });
+//       return;
+//     }
 
-    if (state.submissionsSinceVerification === 0) {
-      const timeout = setTimeout(() => {
-        dispatch('verification-required');
-      }, 120 * 1000);
-      timeoutRef.current = timeout;
-    }
+//     if (state.submissionsSinceVerification === 0) {
+//       const timeout = setTimeout(() => {
+//         dispatch('verification-required');
+//       }, 120 * 1000);
+//       timeoutRef.current = timeout;
+//     }
 
-    if (state.submissionsSinceVerification === 9) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+//     if (state.submissionsSinceVerification === 9) {
+//       if (timeoutRef.current) {
+//         clearTimeout(timeoutRef.current);
+//       }
 
-      dispatch('verification-required');
-    }
+//       dispatch('verification-required');
+//     }
 
-    onSubmit(inputNumberValue);
-    setInputValue('');
-    inputRef.current?.focus();
-    dispatch('submission');
-  };
+//     onSubmit(inputNumberValue);
+//     setInputValue('');
+//     inputRef.current?.focus();
+//     dispatch('submission');
+//   };
 
-  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
-    event
-  ) => {
-    if (event.key === 'Enter') {
-      handleSubmit();
-    }
-  };
+//   const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (
+//     event
+//   ) => {
+//     if (event.key === 'Enter') {
+//       handleSubmit();
+//     }
+//   };
 
-  const handleSuccess = async (token: string) => {
-    try {
-      const response = await fetch(`${BACKEND_HOST}/v1/verify`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        body: JSON.stringify({ token }),
-      });
+//   const handleSuccess = async (token: string) => {
+//     try {
+//       const response = await fetch(`${BACKEND_HOST}/v1/verify`, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         method: 'POST',
+//         body: JSON.stringify({ token }),
+//       });
 
-      if (!response.ok) {
-        throw new Error('Failed to verify');
-      }
+//       if (!response.ok) {
+//         throw new Error('Failed to verify');
+//       }
 
-      const data = await response.json();
+//       const data = await response.json();
 
-      if (!('success' in data) || !data.success) {
-        return;
-      }
+//       if (!('success' in data) || !data.success) {
+//         return;
+//       }
 
-      dispatch('verify');
-    } catch (error) {
-      // todo: sentry error handling
-      console.error(error);
-    }
-  };
+//       dispatch('verify');
+//     } catch (error) {
+//       // todo: sentry error handling
+//       console.error(error);
+//     }
+//   };
 
-  if (!state.verified) {
-    return (
-      <div className='flex flex-col self-center gap-2 w-full'>
-        <p className='text-center text-gray-400'>
-          Verify you're a human to continue
-        </p>
-        <Turnstile
-          options={{
-            size: 'flexible',
-            theme: 'dark',
-          }}
-          className='w-full  h-auto max-w-[95vw] self-center sm:!w-96'
-          siteKey={import.meta.env.VITE_CF_TURNSTILE_KEY}
-          onSuccess={handleSuccess}
-        />
-      </div>
-    );
-  }
+//   if (!state.verified) {
+//     return (
+//       <div className='flex flex-col self-center gap-2 w-full'>
+//         <p className='text-center text-gray-400'>
+//           Verify you're a human to continue
+//         </p>
+//         <Turnstile
+//           options={{
+//             size: 'flexible',
+//             theme: 'dark',
+//           }}
+//           className='w-full  h-auto max-w-[95vw] self-center sm:!w-96'
+//           siteKey={import.meta.env.VITE_CF_TURNSTILE_KEY}
+//           onSuccess={handleSuccess}
+//         />
+//       </div>
+//     );
+//   }
 
-  return (
-    <div className='border self-center max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
-      <input
-        placeholder='Write the next number'
-        autoFocus
-        value={inputValue}
-        onKeyDown={handleKeyDown}
-        className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
-        onChange={(event) => setInputValue(event.target.value)}
-      />
-      <button
-        type='button'
-        className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
-        onClick={handleSubmit}
-      >
-        <svg
-          width='24'
-          height='24'
-          viewBox='0 0 24 24'
-          fill='none'
-          xmlns='http://www.w3.org/2000/svg'
-        >
-          <path
-            fillRule='evenodd'
-            clipRule='evenodd'
-            d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
-            fill='#FAFAF9'
-          />
-        </svg>
-      </button>
-    </div>
-  );
-}
+//   return (
+//     <div className='border self-center max-w-[95vw] w-full sm:w-96 min-[500px]:bottom-6 border-gray-600 justify-between bg-gray-800 flex items-center px-4 py-2 rounded-xl'>
+//       <input
+//         placeholder='Write the next number'
+//         autoFocus
+//         value={inputValue}
+//         onKeyDown={handleKeyDown}
+//         className='flex-1 pl-2 text-white bg-transparent outline-none text-lg min-w-0'
+//         onChange={(event) => setInputValue(event.target.value)}
+//       />
+//       <button
+//         type='button'
+//         className='bg-gray-700 border border-gray-600 rounded w-11 h-11 flex items-center justify-center'
+//         onClick={handleSubmit}
+//       >
+//         <svg
+//           width='24'
+//           height='24'
+//           viewBox='0 0 24 24'
+//           fill='none'
+//           xmlns='http://www.w3.org/2000/svg'
+//         >
+//           <path
+//             fillRule='evenodd'
+//             clipRule='evenodd'
+//             d='M11.2929 8.29289C11.6834 7.90237 12.3166 7.90237 12.7071 8.29289L18.7071 14.2929C19.0976 14.6834 19.0976 15.3166 18.7071 15.7071C18.3166 16.0976 17.6834 16.0976 17.2929 15.7071L12 10.4142L6.70711 15.7071C6.31658 16.0976 5.68342 16.0976 5.29289 15.7071C4.90237 15.3166 4.90237 14.6834 5.29289 14.2929L11.2929 8.29289Z'
+//             fill='#FAFAF9'
+//           />
+//         </svg>
+//       </button>
+//     </div>
+//   );
+// }
 
 function Timestamp() {
   return (
@@ -895,118 +889,118 @@ function Timestamp() {
   );
 }
 
-function Game({
-  failedNumber,
-  highscore,
-  userCount,
-  elements,
-  onSubmit,
-  scope,
-  keyValue,
-  onSendMessage,
-  messages,
-  username,
-  setUsername,
-}: {
-  failedNumber: null | number;
-  highscore: number;
-  userCount: number;
-  elements: Set<number>;
-  onSubmit: (value: number) => void;
-  scope: AnimationScope;
-  keyValue: number;
-  onSendMessage: SendMessageEvent;
-  messages: MessagesType;
-  username: string;
-  setUsername: (value: string) => void;
-}) {
-  const highestNumber = useMemo(() => Math.max(...elements), [elements]);
+// function Game({
+//   failedNumber,
+//   highscore,
+//   userCount,
+//   elements,
+//   onSubmit,
+//   scope,
+//   keyValue,
+//   onSendMessage,
+//   messages,
+//   username,
+//   setUsername,
+// }: {
+//   failedNumber: null | number;
+//   highscore: number;
+//   userCount: number;
+//   elements: Set<number>;
+//   onSubmit: (value: number) => void;
+//   scope: AnimationScope;
+//   keyValue: number;
+//   onSendMessage: SendMessageEvent;
+//   messages: MessagesType;
+//   username: string;
+//   setUsername: (value: string) => void;
+// }) {
+//   const highestNumber = useMemo(() => Math.max(...elements), [elements]);
 
-  const elementsSorted = Array.from(elements).sort((a, b) => a - b);
+//   const elementsSorted = Array.from(elements).sort((a, b) => a - b);
 
-  return (
-    <div ref={scope}>
-      <a
-        href='https://buymeacoffee.com/noahbaron'
-        className='text-gray-500 underline fixed top-5 right-5 sm:bottom-5 sm:top-auto'
-        target='_blank'
-        rel='noreferrer'
-      >
-        buy me a coffee
-      </a>
+//   return (
+//     <div ref={scope}>
+//       <a
+//         href='https://buymeacoffee.com/noahbaron'
+//         className='text-gray-500 underline fixed top-5 right-5 sm:bottom-5 sm:top-auto'
+//         target='_blank'
+//         rel='noreferrer'
+//       >
+//         buy me a coffee
+//       </a>
 
-      <div className='hidden sm:block'>
-        <DesktopChatPopover onSendMessage={onSendMessage} messages={messages} />
-      </div>
-      <div className='flex items-center gap-5'>
-        <a
-          target='_blank'
-          className='hidden text-gray-500 underline sm:block fixed bottom-5 left-5'
-          href='https://nbaron.com/'
-        >
-          built by nbaron
-        </a>
-      </div>
-      <Timestamp />
-      <div className='fixed sm:right-6 top-5 sm:justify-between left-5 text-lg text-gray-50 flex'>
-        <div className='flex flex-col'>
-          <a href='/leaderboard'>Leaderboard</a>
-          <UsernamePopover setUsername={setUsername} username={username} />
-        </div>
+//       <div className='hidden sm:block'>
+//         <DesktopChatPopover onSendMessage={onSendMessage} messages={messages} />
+//       </div>
+//       <div className='flex items-center gap-5'>
+//         <a
+//           target='_blank'
+//           className='hidden text-gray-500 underline sm:block fixed bottom-5 left-5'
+//           href='https://nbaron.com/'
+//         >
+//           built by nbaron
+//         </a>
+//       </div>
+//       <Timestamp />
+//       <div className='fixed sm:right-6 top-5 sm:justify-between left-5 text-lg text-gray-50 flex'>
+//         <div className='flex flex-col'>
+//           <a href='/leaderboard'>Leaderboard</a>
+//           <UsernamePopover setUsername={setUsername} username={username} />
+//         </div>
 
-        <div className='hidden sm:flex items-center gap-3 h-fit'>
-          <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
-          <p className='text-gray-50'>
-            {userCount}{' '}
-            <span className='text-gray-400'>
-              {userCount === 1 ? 'user' : 'users'} online
-            </span>
-          </p>
-        </div>
-      </div>
-      <div className='flex items-center gap-5'>
-        {/* TODO: fix centering */}
-        <div
-          className='fixed top-1/2 sm:-translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] -translate-y-full'
-          key={keyValue}
-        >
-          {[...elementsSorted].map((number) => (
-            <NumberElement
-              key={number}
-              number={number}
-              isHighestNumber={highestNumber === number}
-            />
-          ))}
-          {typeof failedNumber === 'number' && (
-            <FailedNumberElement number={failedNumber} />
-          )}
-        </div>
-        <div className='fixed bottom-4 sm:bottom-6 left-5 right-5 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex flex-col gap-3'>
-          <div className=''></div>
-          <div className='flex items-center justify-between'>
-            <div className='sm:hidden flex items-center gap-2 self-end'>
-              <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
-              <p className='text-gray-50'>
-                {userCount} {userCount === 1 ? 'user' : 'users'} online
-              </p>
-            </div>
-            <div className='sm:hidden'>
-              <MobileChatDialog
-                onSendMessage={onSendMessage}
-                messages={messages}
-              />
-            </div>
-          </div>
-          <InputField onSubmit={onSubmit} />
-          <p className='text-gray-500 text-center'>
-            This website will shut down forever once someone counts to{' '}
-            <span className='text-gray-50'>1,000,000</span> in order
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+//         <div className='hidden sm:flex items-center gap-3 h-fit'>
+//           <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
+//           <p className='text-gray-50'>
+//             {userCount}{' '}
+//             <span className='text-gray-400'>
+//               {userCount === 1 ? 'user' : 'users'} online
+//             </span>
+//           </p>
+//         </div>
+//       </div>
+//       <div className='flex items-center gap-5'>
+//         {/* TODO: fix centering */}
+//         <div
+//           className='fixed top-1/2 sm:-translate-y-1/2 right-1/2 gap-8 text-[64px] flex translate-x-[32px] -translate-y-full'
+//           key={keyValue}
+//         >
+//           {[...elementsSorted].map((number) => (
+//             <NumberElement
+//               key={number}
+//               number={number}
+//               isHighestNumber={highestNumber === number}
+//             />
+//           ))}
+//           {typeof failedNumber === 'number' && (
+//             <FailedNumberElement number={failedNumber} />
+//           )}
+//         </div>
+//         <div className='fixed bottom-4 sm:bottom-6 left-5 right-5 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 flex flex-col gap-3'>
+//           <div className=''></div>
+//           <div className='flex items-center justify-between'>
+//             <div className='sm:hidden flex items-center gap-2 self-end'>
+//               <div className='bg-[#ACFF58] animate-pulse rounded-full w-3 h-3' />
+//               <p className='text-gray-50'>
+//                 {userCount} {userCount === 1 ? 'user' : 'users'} online
+//               </p>
+//             </div>
+//             <div className='sm:hidden'>
+//               <MobileChatDialog
+//                 onSendMessage={onSendMessage}
+//                 messages={messages}
+//               />
+//             </div>
+//           </div>
+//           <InputField onSubmit={onSubmit} />
+//           <p className='text-gray-500 text-center'>
+//             This website will shut down forever once someone counts to{' '}
+//             <span className='text-gray-50'>1,000,000</span> in order
+//           </p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 type State = {
   isLoading: boolean;

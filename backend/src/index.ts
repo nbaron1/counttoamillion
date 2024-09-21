@@ -103,6 +103,8 @@ export class WebSocketCountServer extends DurableObject<Env> {
 
 					const body = await response.json();
 
+					console.log({ body });
+
 					if (!body || typeof body !== 'object' || !('success' in body) || body.success !== true) {
 						throw new Error('Verification failed');
 					}
@@ -115,6 +117,7 @@ export class WebSocketCountServer extends DurableObject<Env> {
 
 					ws.send(JSON.stringify({ type: 'verified' }));
 				} catch (error) {
+					console.error(error);
 					ws.send(JSON.stringify({ type: 'verification-required' }));
 				}
 
