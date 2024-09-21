@@ -63,7 +63,7 @@ jobs:
         env:
           PUBLIC_BACKEND_HOST: https://api.counttoamillion.com
           PUBLIC_BACKEND_WEBSOCKET_HOST: wss://api.counttoamillion.com
-          PUBLIC_CF_TURNSTILE_KEY: 123,
+          PUBLIC_CF_TURNSTILE_KEY: ${{ secrets.CF_TURNSTILE_SITE_KEY }},
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       - name: Publish to Cloudflare Pages
