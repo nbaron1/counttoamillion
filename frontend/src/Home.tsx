@@ -15,7 +15,6 @@ import './dialog.css';
 import './hide-scrollbar.css';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { UsernamePopover } from './UsernamePopover';
-import { supabase } from './lib/supabase';
 import { config } from './lib/config';
 import { AuthProvider, useUser } from './context/Auth';
 
@@ -1277,22 +1276,13 @@ const useWebsocket = (connectionURL: string) => {
 
   useEffect(() => {
     const connectWebSocket = async () => {
-      if (!user) return; // Only connect if user is authenticated
+      console.log('connecting to ws');
 
-      const { data, error } = await supabase.auth.getSession();
+      const tokenResponse = await fetch('/api/websocket-token');
+      const { token } = await tokenResponse.json();
+      console.log({ token });
 
-      if (error) {
-        console.error('Error getting session:', error);
-        return;
-      }
-
-      if (!data.session) return;
-      if (websocketRef.current) return;
-
-      const accessToken = data.session.access_token;
-      const url = `${connectionURL}?token=${accessToken}`;
-
-      const websocket = new WebSocket(url);
+      const websocket = new WebSocket(`ws://localhost:5000?token=${token}`);
 
       websocket.addEventListener('open', handleOpen);
       websocket.addEventListener('close', (event) => {
@@ -1346,6 +1336,29 @@ const useGameStatus = () => {
     null | 'waiting' | 'ongoing' | 'final'
   >(null);
 
+  const getGameStatusData = async () => {
+    try {
+      const response = await fetch('/api/game-status');
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch game status');
+      }
+
+      const data = await response.json();
+      console.log({ data });
+      setGameStatusData(data);
+    } catch (error) {
+      const oneSecond = new Promise((resolve) => setTimeout(resolve, 1000));
+      await oneSecond;
+
+      getGameStatusData();
+    }
+  };
+
+  useEffect(() => {
+    getGameStatusData();
+  }, []);
+
   const updatedGameStatus = (gameStatusData: GameStatusData) => {
     const startedAtTime = new Date(gameStatusData.started_at).getTime();
     const now = new Date().getTime();
@@ -1379,30 +1392,6 @@ const useGameStatus = () => {
     };
   }, [gameStatusData]);
 
-  const getGameStatus = useCallback(async () => {
-    try {
-      const { data } = await supabase.from('game_status').select('*');
-
-      // todo: sentry error handling
-      if (!data) return;
-
-      setGameStatusData(data[0]);
-    } catch (error) {
-      console.log(error);
-      // const oneSecond = new Promise<void>((resolve) => {
-      //   setTimeout(() => {
-      //     resolve();
-      //   }, 1000);
-      // });
-      // await oneSecond;
-      // return fetchGameStatusData();
-    }
-  }, []);
-
-  useEffect(() => {
-    getGameStatus();
-  }, [getGameStatus]);
-
   return gameStatus;
 };
 
@@ -1411,7 +1400,6 @@ function Home() {
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
-  const [email, setEmail] = useState('');
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
   console.log('is here!', { isVerificationRequired });
@@ -1456,60 +1444,35 @@ function Home() {
     sendMessage(JSON.stringify({ type: 'verify', token }));
   };
 
-  const handleLoginWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
-  };
-
-  const handleLoginWithEmail = async () => {
-    await supabase.auth.signInWithOtp({ email });
-  };
-
   if (number === null) return;
 
   return (
-    <>
-      <div className='top-4 right-4 fixed flex flex-col gap-4'>
-        {isVerificationRequired && (
-          <Turnstile
-            // todo: handle
-            // onError={() => setStatus('error')}
-            // onExpire={() => setStatus('expired')}
-            siteKey={config.turnstileSiteKey}
-            onSuccess={handleSuccess}
-          />
-        )}
-        <button onClick={handleLoginWithGoogle} className='text-white'>
-          sign in google
-        </button>
-        <div className='flex flex-col gap-2'>
-          <input
-            name='email'
-            type='email'
-            className='text-black'
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <button className='text-white' onClick={handleLoginWithEmail}>
-            send magic link
-          </button>
-        </div>
-      </div>
-      <div className='text-black flex flex-col fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2'>
-        <p className='text-white'>{number}</p>
-        <input
-          type='number'
-          placeholder='Write next number'
-          value={String(nextNumber)}
-          onChange={(event) => {
-            console.log(Number(event.target.value));
-            setNextNumber(Number(event.target.value));
-          }}
+    <div className='text-black flex flex-col fixed left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2'>
+      <p className='text-white'>{number}</p>
+      <input
+        type='number'
+        placeholder='Write next number'
+        value={String(nextNumber)}
+        onChange={(event) => {
+          console.log(Number(event.target.value));
+          setNextNumber(Number(event.target.value));
+        }}
+      />
+      {/* {isVerificationRequired ? (
+        <Turnstile
+          // todo: handle
+          // onError={() => setStatus('error')}
+          // onExpire={() => setStatus('expired')}
+          siteKey={config.turnstileSiteKey}
+          onSuccess={handleSuccess}
         />
-        <button className='text-white' onClick={handleSubmit}>
-          Submit
-        </button>
-      </div>
-    </>
+      ) : (
+
+      )} */}
+      <button className='text-white' onClick={handleSubmit}>
+        Submit
+      </button>
+    </div>
   );
 }
 

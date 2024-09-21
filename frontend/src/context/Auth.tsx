@@ -1,53 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { type User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
 import { Spinner } from '../Home';
 
 const UserContext = React.createContext<User | null>(null);
 
 export const useUser = () => React.useContext(UserContext);
 
+// todo: websocket token provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // const [user, setUser] = useState<User | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check active sessions and sets the user
-    const setSessionUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    };
-    setSessionUser();
+  const auth = async () => {
+    const response = await fetch('/api/auth', { method: 'POST' });
 
-    // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_, session) => {
-        setUser(session?.user ?? null);
-        setIsLoading(false);
-      }
-    );
+    if (!response.ok) {
+      return;
+    }
 
-    return () => {
-      listener?.subscription.unsubscribe();
-    };
-  }, []);
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    console.log('is here!');
-
-    const handleAnonymousAuth = async () => {
-      const response = await supabase.auth.signInAnonymously();
-      console.log({ response });
-    };
-
-    if (isLoading || user) return;
-
-    handleAnonymousAuth();
-  }, [user, isLoading]);
+    auth();
+  }, [isLoading]);
 
   if (isLoading) {
     return (
@@ -57,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+  return <UserContext.Provider value={null}>{children}</UserContext.Provider>;
 }
 
 //   const [isAuthenticated, setIsAuthenticated] = useState(false);
