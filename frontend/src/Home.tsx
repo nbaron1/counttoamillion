@@ -1409,7 +1409,7 @@ function Home() {
   useEffect(() => {
     const unsubscribe = subscribe('message', (data) => {
       const parsedData = JSON.parse(data);
-
+      console.log('parsedData', parsedData);
       switch (parsedData.type) {
         case 'update-count': {
           setNumber(parsedData.value);
@@ -1454,6 +1454,7 @@ function Home() {
     await supabase.auth.signInWithOtp({ email });
   };
 
+  console.log({ number });
   if (number === null) return;
 
   return (

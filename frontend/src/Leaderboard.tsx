@@ -9,7 +9,7 @@ function LeaderboardPage({ page }: { page: number }) {
     {
       created_at: string;
       current_attempt_id: number | null;
-      highest_count: number;
+      high_score: number;
       id: string;
       username: string;
     }[]
@@ -21,7 +21,7 @@ function LeaderboardPage({ page }: { page: number }) {
     const { data: scores } = await supabase
       .from('app_user')
       .select('*')
-      .order('highest_count')
+      .order('high_score')
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (!scores) return;
@@ -33,10 +33,10 @@ function LeaderboardPage({ page }: { page: number }) {
     getPage();
   }, [getPage]);
 
-  return scores.map(({ id, highest_count, username }) => (
+  return scores.map(({ id, high_score, username }) => (
     <div key={id} className='flex items-center text-white justify-between'>
       <p>{username}</p>
-      <p>{highest_count}</p>
+      <p>{high_score}</p>
     </div>
   ));
 }

@@ -12,7 +12,7 @@
  */
 
 import { DurableObject } from 'cloudflare:workers';
-import { handleCount } from './count';
+import { handleCount } from './score';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 import postgres from 'postgres';
@@ -51,15 +51,15 @@ export class WebSocketCountServer extends DurableObject<Env> {
 
 		const userId = userResult.user.id;
 
-		const currentCountResult = await this
-			.sql`select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
+		const [currentAttempt] = await this
+			.sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
 
-		const currentCount = Number(currentCountResult[0].count);
+		const currentScore = Number(currentAttempt.score);
 
 		server.send(
 			JSON.stringify({
 				type: 'update-count',
-				value: currentCount,
+				value: currentScore,
 			})
 		);
 
@@ -131,14 +131,14 @@ export class WebSocketCountServer extends DurableObject<Env> {
 				}
 
 				// todo: refactor into one userId
-				const currentCountResult = await this
-					.sql`select count from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
+				const [currentAttempt] = await this
+					.sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
 
-				const currentCount = Number(currentCountResult[0].count);
+				const currentCount = Number(currentAttempt.score);
 
 				if (currentCount + 1 != parsedData.value) {
 					await this.sql`WITH inserted AS (
-				       INSERT INTO attempt (user_id, count)
+				       INSERT INTO attempt (user_id, score)
 				       VALUES (${userId}, 1)
 				       RETURNING id
 				       )
@@ -166,7 +166,7 @@ export class WebSocketCountServer extends DurableObject<Env> {
 				}
 
 				await this.sql`UPDATE attempt
-				     SET count = ${parsedData.value}
+				     SET score = ${parsedData.value}
 				     WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = ${userId})`;
 
 				ws.send(JSON.stringify({ type: 'update-count', value: parsedData.value }));

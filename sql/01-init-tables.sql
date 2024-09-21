@@ -14,8 +14,8 @@ create table game_status (
 create table attempt (
 	id bigserial primary key,
 	created_at timestamp not null default CURRENT_TIMESTAMP,
-	count bigint not null default 0,
-	user_id text not null references app_user(id)
+	score bigint not null default 0,
+	user_id text not null references app_user(id) on delete cascade
 );
 
 insert into game_status default values;
