@@ -175,8 +175,7 @@ export class WebSocketCountServer extends DurableObject<Env> {
 		}
 	}
 
-	async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
-		// If the client closes the connection, the runtime will invoke the webSocketClose() handler.
-		ws.close(code, 'Durable Object is closing WebSocket');
+	async webSocketClose(ws: WebSocket) {
+		this.sessions.delete(ws);
 	}
 }

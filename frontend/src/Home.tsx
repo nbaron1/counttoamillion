@@ -17,7 +17,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { UsernamePopover } from './UsernamePopover';
 import { supabase } from './lib/supabase';
 import { config } from './lib/config';
-import { AuthProvider, useUser } from './context/Auth';
+import { useUser } from './context/Auth';
 
 function ChatIcon() {
   return (
