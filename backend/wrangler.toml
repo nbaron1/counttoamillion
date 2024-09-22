@@ -40,6 +40,11 @@ tag = "v2"
 new_classes = ["WebSocketRankServer"]
 
 
+[[hyperdrive]]
+binding = "DB"
+id = "6b2cc49c2ea54625a2daac5f07c2c021"
+localConnectionString = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+
 # Secret bindings
 # CF_TURNSTILE_SECRET = ""
 # DATABASE_URL = ""
@@ -90,9 +95,6 @@ new_classes = ["WebSocketRankServer"]
 
 # Bind a Hyperdrive configuration. Use to accelerate access to your existing databases from Cloudflare Workers.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#hyperdrive
-# [[hyperdrive]]
-# binding = "MY_HYPERDRIVE"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces

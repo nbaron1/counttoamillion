@@ -11,4 +11,5 @@ interface Env {
 	SUPABASE_SECRET_KEY: string;
 	WEBSOCKET_COUNT_SERVER: DurableObjectNamespace<WebSocketCountServer>;
 	WEBSOCKET_RANK_SERVER: DurableObjectNamespace<WebSocketRankServer>;
+	DB: Hyperdrive;
 }
