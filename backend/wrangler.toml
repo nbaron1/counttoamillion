@@ -42,7 +42,7 @@ new_classes = ["WebSocketRankServer"]
 
 [[hyperdrive]]
 binding = "DB"
-id = "69947f980ffd41f89d107a96ddbdbe20"
+id = "918b7b44929f4585adc98a7ee496ea51"
 localConnectionString = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
 # Secret bindings
