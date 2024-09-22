@@ -60,7 +60,7 @@ begin
   insert into attempt default values returning id into new_attempt_id;
 
   -- create new user with new attempt
-  insert into app_user (id, username, current_attempt_id) values (new.id, 'Anonymous', new_attempt_id);
+  insert into app_user (id, username, current_attempt_id) values (new.id, new.raw_user_meta_data ->> 'username', new_attempt_id);
 
   -- update the attempt with the user id
   update attempt set user_id = new.id where id = new_attempt_id;

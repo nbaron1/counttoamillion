@@ -40,7 +40,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('is here!');
 
     const handleAnonymousAuth = async () => {
-      const response = await supabase.auth.signInAnonymously();
+      const response = await supabase.auth.signInAnonymously({
+        options: {
+          data: {
+            username: 'PLACEHOLDER_NAME_HERE',
+          },
+        },
+      });
       console.log({ response });
     };
 

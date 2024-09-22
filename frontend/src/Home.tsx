@@ -18,6 +18,7 @@ import { UsernamePopover } from './UsernamePopover';
 import { supabase } from './lib/supabase';
 import { config } from './lib/config';
 import { useUser } from './context/Auth';
+import { usePage } from './context/Page';
 
 function ChatIcon() {
   return (
@@ -1436,6 +1437,7 @@ function Home() {
     `${config.backendWebsocketHost}/score`,
     'score'
   );
+  const { setPage } = usePage();
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
@@ -1498,6 +1500,9 @@ function Home() {
   return (
     <>
       <Rank />
+      <button className='text-white' onClick={() => setPage('leaderboard')}>
+        Leaderboard
+      </button>
       <div className='top-4 right-4 fixed flex flex-col gap-4'>
         {isVerificationRequired && (
           <Turnstile
