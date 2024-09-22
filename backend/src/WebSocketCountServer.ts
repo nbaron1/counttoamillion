@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 import postgres from 'postgres';
+import { type Env } from '../worker-configuration';
 
 export class WebSocketCountServer extends DurableObject<Env> {
 	supabase: SupabaseClient<Database>;

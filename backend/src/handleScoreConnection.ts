@@ -1,4 +1,6 @@
-export async function handleCount(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+import { Env } from '../worker-configuration';
+
+export async function handleScoreConnection(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 	const upgradeHeader = request.headers.get('Upgrade');
 
 	if (!upgradeHeader || upgradeHeader !== 'websocket') {

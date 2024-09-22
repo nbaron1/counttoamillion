@@ -6,7 +6,7 @@ create table app_user (
   high_score bigint not null default 1
 );
 
-create index idx_app_user_high_score on app_user(high_score);
+CREATE INDEX idx_app_user_id_high_score ON app_user(id, high_score);
 
 create table attempt (
   id bigserial primary key,

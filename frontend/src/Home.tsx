@@ -1246,7 +1246,7 @@ const useSubscribe = () => {
   };
 };
 
-const useWebsocket = (connectionURL: string) => {
+const useWebsocket = (connectionURL: string, topic: string) => {
   const websocketRef = useRef<WebSocket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const retryTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
@@ -1307,8 +1307,7 @@ const useWebsocket = (connectionURL: string) => {
         retryTimeoutsRef.current.push(newTimeout);
       });
       websocket.addEventListener('message', (event) => {
-        console.log('MESSAGE', event.data);
-        eventEmitter.emit('message', event.data);
+        eventEmitter.emit(topic, event.data);
       });
 
       websocketRef.current = websocket;
@@ -1396,8 +1395,47 @@ const useGameStatus = () => {
   return gameStatus;
 };
 
+function Rank() {
+  const [rank, setRank] = useState<number | null>(null);
+
+  const { isLoading, sendMessage } = useWebsocket(
+    `${config.backendWebsocketHost}/rank`,
+    'rank'
+  );
+
+  const subscribe = useSubscribe();
+
+  useEffect(() => {
+    subscribe('rank', (message) => {
+      const data = JSON.parse(message);
+      if (data.type !== 'rank' || typeof data.value !== 'number') return;
+
+      setRank(data.value);
+    });
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isLoading) return;
+
+      sendMessage(JSON.stringify({ type: 'rank' }));
+    }, 1 * 1000);
+
+    return () => clearInterval(interval);
+  }, [isLoading, sendMessage]);
+
+  if (isLoading) {
+    return <p className='text-white'>Rank loading</p>;
+  }
+
+  return <p className='text-white'>Rank: {rank}</p>;
+}
+
 function Home() {
-  const { sendMessage } = useWebsocket(`${config.backendWebsocketHost}/score`);
+  const { sendMessage } = useWebsocket(
+    `${config.backendWebsocketHost}/score`,
+    'score'
+  );
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
@@ -1407,7 +1445,7 @@ function Home() {
   console.log('is here!', { isVerificationRequired });
 
   useEffect(() => {
-    const unsubscribe = subscribe('message', (data) => {
+    const unsubscribe = subscribe('score', (data) => {
       const parsedData = JSON.parse(data);
       console.log('parsedData', parsedData);
       switch (parsedData.type) {
@@ -1459,6 +1497,7 @@ function Home() {
 
   return (
     <>
+      <Rank />
       <div className='top-4 right-4 fixed flex flex-col gap-4'>
         {isVerificationRequired && (
           <Turnstile
