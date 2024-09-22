@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
+import { usePage } from './context/Page';
 
 const PAGE_SIZE = 50;
 
@@ -56,6 +57,8 @@ export function Leaderboard() {
     'global' | 'your-ranking'
   >('global');
 
+  const { setPage: setDisplayedPage } = usePage();
+
   const [page, setPage] = useState(1);
   const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
 
@@ -81,6 +84,7 @@ export function Leaderboard() {
   return (
     <>
       <div className='flex flex-col max-h-screen'>
+        <button onClick={() => setDisplayedPage('home')}>Home</button>
         <input
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
