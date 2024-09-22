@@ -47,7 +47,6 @@ localConnectionString = "postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
 # Secret bindings
 # CF_TURNSTILE_SECRET = ""
-# DATABASE_URL = ""
 # SUPABASE_SECRET_KEY = ""
 
 # MY_VARIABLE = "production_value"

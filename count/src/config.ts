@@ -12,7 +12,6 @@ const throwIfMissing = (env: string) => {
 
 export const config = {
   port: process.env.PORT ? Number(process.env.PORT) : 5000,
-  databaseURL: throwIfMissing('DATABASE_URL'),
   frontendHost: throwIfMissing('FRONTEND_HOST'),
   turnstileSecret: throwIfMissing('CF_TURNSTILE_SECRET'),
   supabaseURL: throwIfMissing('SUPABASE_URL'),

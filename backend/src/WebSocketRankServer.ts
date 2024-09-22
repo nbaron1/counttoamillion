@@ -12,7 +12,7 @@ export class WebSocketRankServer extends DurableObject<Env> {
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
 		this.supabase = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
-		this.sql = postgres(this.env.DATABASE_URL);
+		this.sql = postgres(this.env.DB.connectionString);
 	}
 
 	private async getUserRank(userId: string) {
