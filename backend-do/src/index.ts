@@ -1,6 +1,7 @@
 import express from 'express';
 import expressWs from 'express-ws';
 import cors from 'cors';
+import { config } from './config';
 
 const app = expressWs(express()).app;
 
@@ -35,4 +36,8 @@ app.ws('/rank', (ws) => {
   ws.on('message', async (message) => {
     console.log('ws score data', message);
   });
+});
+
+app.listen(config.port, () => {
+  console.log(`Server listening on port ${config.port}`);
 });
