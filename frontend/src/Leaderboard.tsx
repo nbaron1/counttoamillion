@@ -20,7 +20,7 @@ function LeaderboardPage({ page }: { page: number }) {
     const { data: scores } = await supabase
       .from('app_user')
       .select('*')
-      .order('high_score')
+      .order('high_score', { ascending: false })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
     if (!scores) return;

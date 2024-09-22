@@ -17,11 +17,16 @@ export class WebSocketRankServer extends DurableObject<Env> {
 
 	private async getUserRank(userId: string) {
 		const [userRank] = await this.sql`
-        select 
-            id, 
-            dense_rank() over (order by high_score desc) as rank
-        from 
-            app_user where id = ${userId}`;
+		with ranked_users as (
+			select 
+				id, 
+				high_score,
+				dense_rank() over (order by high_score desc) as rank
+			from app_user
+		)
+		select * 
+		from ranked_users
+		where id = ${userId}`;
 
 		return Number(userRank.rank);
 	}
@@ -77,7 +82,7 @@ export class WebSocketRankServer extends DurableObject<Env> {
 
 		if (data.type !== 'rank') return;
 
-		const rank = this.getUserRank(userId);
+		const rank = await this.getUserRank(userId);
 
 		ws.send(
 			JSON.stringify({
