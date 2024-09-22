@@ -19,9 +19,7 @@ export default {
 			case '/score': {
 				return handleScoreConnection(request, env, ctx);
 			}
-
 			case '/rank': {
-				console.log('rank');
 				return handleRankConnection(request, env, ctx);
 			}
 		}

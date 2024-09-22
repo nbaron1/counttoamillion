@@ -30,18 +30,19 @@ jobs:
           supabase link --project-ref $SUPABASE_PROJECT_ID
           supabase db push
 
-  deploy-worker:
-    needs: migrate-db
-    name: Deploy Worker
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          command: deploy --compatibility-flags="nodejs_compat"
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: backend
+  # TODO: Deploy digitalocean app
+  # deploy-worker:
+  #   needs: migrate-db
+  #   name: Deploy Worker
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Deploy
+  #       uses: cloudflare/wrangler-action@v3
+  #       with:
+  #         command: deploy --compatibility-flags="nodejs_compat"
+  #         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  #         workingDirectory: backend
 
   deploy-frontend:
     name: Deploy Frontend
