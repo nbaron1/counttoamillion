@@ -31,11 +31,9 @@ class_name = "WebSocketCountServer"
 name = "WEBSOCKET_RANK_SERVER"
 class_name = "WebSocketRankServer"
 
-
 [[migrations]]
 tag = "v1"
 new_classes = ["WebSocketCountServer"]
-
 
 [[migrations]]
 tag = "v2"
