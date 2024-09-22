@@ -1,24 +1,29 @@
 {
-	"name": "hidden-rice-a443",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev --port 5000",
-		"start": "wrangler dev",
-		"test": "vitest",
-		"cf-typegen": "wrangler types"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.5.2",
-		"@cloudflare/workers-types": "^4.20240919.0",
-		"typescript": "^5.5.2",
-		"vitest": "2.0.5",
-		"wrangler": "^3.60.3"
-	},
-	"dependencies": {
-		"@supabase/supabase-js": "^2.45.4",
-		"@tsndr/cloudflare-worker-router": "^3.2.4",
-		"postgres": "^3.4.4"
-	}
+  "name": "backend-do",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "generate-types": "supabase gen types --lang=typescript --local > ./src/database.types.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-ws": "^5.0.2",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express-ws": "^3.0.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.2"
+  }
 }

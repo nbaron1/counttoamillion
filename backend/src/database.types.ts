@@ -38,21 +38,21 @@ export type Database = {
         Row: {
           created_at: string
           current_attempt_id: number | null
-          highest_count: number
+          high_score: number
           id: string
           username: string
         }
         Insert: {
           created_at?: string
           current_attempt_id?: number | null
-          highest_count?: number
+          high_score?: number
           id: string
           username: string
         }
         Update: {
           created_at?: string
           current_attempt_id?: number | null
-          highest_count?: number
+          high_score?: number
           id?: string
           username?: string
         }
@@ -75,21 +75,21 @@ export type Database = {
       }
       attempt: {
         Row: {
-          count: number
           created_at: string
           id: number
+          score: number
           user_id: string | null
         }
         Insert: {
-          count?: number
           created_at?: string
           id?: number
+          score?: number
           user_id?: string | null
         }
         Update: {
-          count?: number
           created_at?: string
           id?: number
+          score?: number
           user_id?: string | null
         }
         Relationships: [
