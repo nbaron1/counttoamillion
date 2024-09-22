@@ -27,16 +27,18 @@ SUPABASE_URL = "https://uxljxvtvtavsxmvacdyo.supabase.co"
 name = "WEBSOCKET_COUNT_SERVER"
 class_name = "WebSocketCountServer"
 
-[[migrations]]
-tag = "v1"
-new_classes = ["WebSocketCountServer"]
-
 [[durable_objects.bindings]]
 name = "WEBSOCKET_RANK_SERVER"
 class_name = "WebSocketRankServer"
 
+
 [[migrations]]
 tag = "v1"
+new_classes = ["WebSocketCountServer"]
+
+
+[[migrations]]
+tag = "v2"
 new_classes = ["WebSocketRankServer"]
 
 
