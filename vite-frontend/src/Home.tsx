@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './dialog.css';
 import './hide-scrollbar.css';
 import { Turnstile } from '@marsidev/react-turnstile';
@@ -9,10 +8,10 @@ import { useUser } from './context/Auth';
 import { usePage } from './context/Page';
 import { useAxios } from './lib/axios';
 
-const WEBSOCKET_HOST = import.meta.env.PUBLIC_BACKEND_WEBSOCKET_HOST;
+const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
 
 if (!WEBSOCKET_HOST) {
-  throw new Error('PUBLIC_BACKEND_WEBSOCKET_HOST not found');
+  throw new Error('VITE_BACKEND_WEBSOCKET_HOST not found');
 }
 
 export function Spinner() {
@@ -218,10 +217,9 @@ const useGameStatus = () => {
 
 function Rank() {
   const [rank, setRank] = useState<number | null>(null);
-  const user = useUser();
   const axios = useAxios();
 
-  const updateRank = async () => {
+  const updateRank = useCallback(async () => {
     try {
       const response = await axios.get(
         `${config.backendApiHost}/users/me/rank`
@@ -229,7 +227,7 @@ function Rank() {
 
       setRank(response.data.rank);
     } catch (error) {}
-  };
+  }, [axios]);
 
   useEffect(() => {
     updateRank();
@@ -239,7 +237,7 @@ function Rank() {
     }, 15 * 1000);
 
     return clearInterval(interval);
-  }, []);
+  }, [updateRank]);
 
   if (rank === null) {
     return <p className='text-white'>Rank loading</p>;
