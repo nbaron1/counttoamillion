@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import expressWs from 'express-ws';
 import cors from 'cors';
 import { config } from './config';
@@ -29,6 +29,52 @@ if (process.env.NODE_ENV === 'development') {
 
 app.get('/health', (req, res) => {
   res.send('OK');
+});
+
+const protectRoute = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const authorization = req.headers.authorization;
+
+  if (typeof authorization !== 'string') {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const token = authorization.split('Bearer ')[1];
+
+  if (!token) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const { data: userResult } = await supabase.auth.getUser(token);
+
+  if (!userResult.user) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  res.locals.userId = userResult.user.id;
+
+  next();
+};
+
+app.get('/users/me/rank', protectRoute, async (req, res) => {
+  try {
+    if (typeof res.locals.userId !== 'string') {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { position, rank } = await getUserRank(res.locals.userId);
+
+    res.status(200).json({ data: { position, rank }, success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
 });
 
 app.ws('/score', async (ws, request) => {
@@ -179,63 +225,29 @@ app.ws('/score', async (ws, request) => {
   });
 });
 
-const getUserRank = async (userId: string) => {
+const getUserRank = async (
+  userId: string
+): Promise<{ rank: number; position: number }> => {
   const [userRank] = await sql`
   with ranked_users as (
     select 
       id, 
       high_score,
-      dense_rank() over (order by high_score desc) as rank
+      dense_rank() over (order by high_score desc) as rank,
+      row_number() OVER (order BY high_score DESC) AS position
     from app_user
   )
-  select * 
+  select rank, position 
   from ranked_users
   where id = ${userId}`;
 
-  return userRank.rank;
+  const data = {
+    rank: Number(userRank.rank),
+    position: Number(userRank.position),
+  };
+
+  return data;
 };
-
-app.ws('/rank', async (ws, request) => {
-  const token = request.query.token;
-
-  if (typeof token !== 'string') {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
-
-  const { data: userResult } = await supabase.auth.getUser(token);
-
-  if (!userResult.user) {
-    ws.close(1008, 'Unauthorized');
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  const userId = userResult.user.id;
-
-  const rank = await getUserRank(userId);
-
-  ws.send(
-    JSON.stringify({
-      type: 'rank',
-      value: rank,
-    })
-  );
-
-  ws.on('message', async (message) => {
-    const data = JSON.parse(message.toString());
-
-    if (data.type !== 'rank') return;
-
-    const rank = await getUserRank(userId);
-
-    ws.send(
-      JSON.stringify({
-        type: 'rank',
-        value: rank,
-      })
-    );
-  });
-});
 
 app.ws('/chat', async (ws, request) => {
   const token = request.query.token;

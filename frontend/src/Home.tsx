@@ -18,6 +18,7 @@ import { supabase } from './lib/supabase';
 import { config } from './lib/config';
 import { useUser } from './context/Auth';
 import { usePage } from './context/Page';
+import { useAxios } from './lib/axios';
 
 function ChatIcon() {
   return (
@@ -1397,34 +1398,30 @@ const useGameStatus = () => {
 
 function Rank() {
   const [rank, setRank] = useState<number | null>(null);
+  const user = useUser();
+  const axios = useAxios();
 
-  const { isLoading, sendMessage } = useWebsocket(
-    `${config.backendWebsocketHost}/rank`,
-    'rank'
-  );
+  const updateRank = async () => {
+    try {
+      const response = await axios.get(
+        `${config.backendApiHost}/users/me/rank`
+      );
 
-  const subscribe = useSubscribe();
+      setRank(response.data.rank);
+    } catch (error) {}
+  };
 
   useEffect(() => {
-    subscribe('rank', (message) => {
-      const data = JSON.parse(message);
-      if (data.type !== 'rank' || typeof data.value !== 'number') return;
+    updateRank();
 
-      setRank(data.value);
-    });
+    const interval = setInterval(() => {
+      updateRank();
+    }, 15 * 1000);
+
+    return clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isLoading) return;
-
-      sendMessage(JSON.stringify({ type: 'rank' }));
-    }, 1 * 1000);
-
-    return () => clearInterval(interval);
-  }, [isLoading, sendMessage]);
-
-  if (isLoading) {
+  if (rank === null) {
     return <p className='text-white'>Rank loading</p>;
   }
 
@@ -1448,6 +1445,7 @@ function Chat() {
     `${config.backendWebsocketHost}/chat`,
     'chat'
   );
+
   const user = useUser();
 
   const handleSendMessage = () => {

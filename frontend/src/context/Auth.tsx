@@ -5,6 +5,7 @@ import { Spinner } from '../Home';
 import { generateRandomUsername } from '../utils/generateRandomUsername';
 
 const UserContext = React.createContext<User | null>(null);
+const AccessTokenContext = React.createContext<string | null>(null);
 
 export const useUser = () => {
   const user = React.useContext(UserContext);
@@ -16,8 +17,19 @@ export const useUser = () => {
   return user;
 };
 
+export const useAccessToken = () => {
+  const accessToken = React.useContext(AccessTokenContext);
+
+  if (!accessToken) {
+    throw new Error('useAccessToken must be used within a UserProvider');
+  }
+
+  return accessToken;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -33,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_, session) => {
         setUser(session?.user ?? null);
+        setAccessToken(session?.access_token ?? null);
       }
     );
 
@@ -60,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handleAnonymousAuth();
   }, [user]);
 
-  if (!user) {
+  if (!user || !accessToken) {
     return (
       <div className='text-white fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2'>
         <Spinner />
@@ -68,5 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+  return (
+    <AccessTokenContext.Provider value={accessToken}>
+      <UserContext.Provider value={user}>{children}</UserContext.Provider>
+    </AccessTokenContext.Provider>
+  );
 }

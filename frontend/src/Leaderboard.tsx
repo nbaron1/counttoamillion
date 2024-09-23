@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { usePage } from './context/Page';
+import { useAxios } from './lib/axios';
+import { useUser } from './context/Auth';
 
 const PAGE_SIZE = 50;
 
@@ -39,8 +41,12 @@ function LeaderboardPage({ page }: { page: number }) {
     return <p>Loading...</p>;
   }
 
-  return scores.map(({ id, high_score, username }) => (
-    <div key={id} className='flex items-center text-white justify-between'>
+  return scores.map(({ id, high_score, username }, index) => (
+    <div
+      key={id}
+      id={`score-${id}`}
+      className='flex items-center text-white justify-between'
+    >
       <p>{username}</p>
       <p>{high_score}</p>
     </div>
@@ -52,6 +58,8 @@ function LeaderboardPage({ page }: { page: number }) {
 
 export function Leaderboard() {
   const [searchTerm, setSearchTerm] = useState('');
+  const axios = useAxios();
+  const user = useUser();
 
   const [leaderboardState, setLeaderboardState] = useState<
     'global' | 'your-ranking'
@@ -73,9 +81,61 @@ export function Leaderboard() {
     setNumberOfPages(pageCount);
   };
 
+  const getRank = useCallback(async () => {
+    try {
+      const response = await axios.get('/users/me/rank');
+
+      if (!response.data.success) {
+        throw new Error('Failed to get rank');
+      }
+
+      const rank = {
+        position: response.data.data.position,
+        rank: response.data.data.rank,
+      };
+
+      return rank;
+    } catch (error) {
+      const oneSecond = new Promise((resolve) => setTimeout(resolve, 1000));
+
+      await oneSecond;
+      return await getRank();
+    }
+  }, []);
+
   useEffect(() => {
     getUsersCount();
   }, []);
+
+  useEffect(() => {
+    if (leaderboardState !== 'your-ranking') return;
+
+    // todo: find a better solution
+    setTimeout(() => {
+      const element = document.getElementById(`score-${user.id}`);
+      if (!element) return;
+
+      element.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, [leaderboardState]);
+
+  const handleSelectYourRanking = async () => {
+    if (leaderboardState === 'your-ranking') {
+      const element = document.getElementById(`score-${user.id}`);
+      if (!element) return;
+
+      element.scrollIntoView({ behavior: 'smooth' });
+
+      return;
+    }
+
+    const { position } = await getRank();
+
+    const pageNumber = Math.ceil(position / PAGE_SIZE);
+
+    setPage(pageNumber);
+    setLeaderboardState('your-ranking');
+  };
 
   if (!numberOfPages) {
     return <p>Loading...</p>;
@@ -131,6 +191,10 @@ export function Leaderboard() {
           >
             6
           </button>
+        </div>
+        <div>
+          <button onClick={() => setLeaderboardState('global')}>Global</button>
+          <button onClick={handleSelectYourRanking}>Your ranking</button>
         </div>
       </div>
     </>

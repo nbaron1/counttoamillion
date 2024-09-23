@@ -13,4 +13,5 @@ export const config = {
   supabaseURL: throwIfMissing('PUBLIC_SUPABASE_URL'),
   supabaseAnonKey: throwIfMissing('PUBLIC_SUPABASE_ANON_KEY'),
   turnstileSiteKey: throwIfMissing('PUBLIC_CF_TURNSTILE_KEY'),
+  backendApiHost: throwIfMissing('PUBLIC_BACKEND_API_HOST'),
 } as const;
