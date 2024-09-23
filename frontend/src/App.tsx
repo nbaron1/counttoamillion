@@ -16,7 +16,7 @@ function Router() {
   }
 }
 
-export function AppHome() {
+export function App() {
   return (
     <PageProvider>
       <AuthProvider>

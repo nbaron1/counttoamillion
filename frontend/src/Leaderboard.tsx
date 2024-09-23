@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { usePage } from './context/Page';
 import { useAxios } from './lib/axios';
@@ -41,7 +41,7 @@ function LeaderboardPage({ page }: { page: number }) {
     return <p>Loading...</p>;
   }
 
-  return scores.map(({ id, high_score, username }, index) => (
+  return scores.map(({ id, high_score, username }) => (
     <div
       key={id}
       id={`score-${id}`}
@@ -95,13 +95,13 @@ export function Leaderboard() {
       };
 
       return rank;
-    } catch (error) {
+    } catch {
       const oneSecond = new Promise((resolve) => setTimeout(resolve, 1000));
 
       await oneSecond;
       return await getRank();
     }
-  }, []);
+  }, [axios]);
 
   useEffect(() => {
     getUsersCount();
@@ -117,7 +117,7 @@ export function Leaderboard() {
 
       element.scrollIntoView({ behavior: 'smooth' });
     }, 100);
-  }, [leaderboardState]);
+  }, [leaderboardState, user.id]);
 
   const handleSelectYourRanking = async () => {
     if (leaderboardState === 'your-ranking') {
