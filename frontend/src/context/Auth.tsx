@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { type User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Spinner } from '../Home';
+import { generateRandomUsername } from '../utils/generateRandomUsername';
 
 const UserContext = React.createContext<User | null>(null);
 
@@ -41,14 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    console.log('is here!');
-
     const handleAnonymousAuth = async () => {
+      const username = generateRandomUsername();
+
       const response = await supabase.auth.signInAnonymously({
         options: {
           data: {
-            // TODO: Replace with a random name
-            username: 'PLACEHOLDER_NAME_HERE',
+            username,
           },
         },
       });
