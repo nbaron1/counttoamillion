@@ -5,6 +5,7 @@ import { config } from './config';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 import { sql } from './sql';
+import { pubClient, subClient } from './redis';
 
 const app = expressWs(express()).app;
 
@@ -51,8 +52,6 @@ app.ws('/score', async (ws, request) => {
     await sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
 
   const currentScore = Number(currentAttempt.score);
-
-  console.log({ currentScore });
 
   ws.send(
     JSON.stringify({
@@ -193,7 +192,7 @@ const getUserRank = async (userId: string) => {
   from ranked_users
   where id = ${userId}`;
 
-  return Number(userRank.rank);
+  return userRank.rank;
 };
 
 app.ws('/rank', async (ws, request) => {
@@ -233,6 +232,74 @@ app.ws('/rank', async (ws, request) => {
       JSON.stringify({
         type: 'rank',
         value: rank,
+      })
+    );
+  });
+});
+
+app.ws('/chat', async (ws, request) => {
+  const token = request.query.token;
+
+  if (typeof token !== 'string') {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  const { data: userResult } = await supabase.auth.getUser(token);
+
+  if (!userResult.user) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  const userId = userResult.user.id;
+  const username = userResult.user.user_metadata.username;
+
+  // subscribe to chat messages
+  subClient.subscribe('chat', (message) => {
+    const messageData = JSON.parse(message);
+
+    if (
+      typeof messageData.user_id !== 'string' ||
+      typeof messageData.message !== 'string' ||
+      typeof messageData.id !== 'number' ||
+      typeof messageData.username !== 'string'
+    ) {
+      return;
+    }
+
+    if (messageData.user_id === userId) return;
+
+    ws.send(
+      JSON.stringify({
+        type: 'message',
+        message: messageData.message,
+        username: messageData.username,
+        created_at: messageData.created_at,
+        user_id: messageData.userId,
+        id: messageData.id,
+      })
+    );
+  });
+
+  ws.on('message', async (data) => {
+    const message = data.toString();
+
+    if (typeof message !== 'string' || typeof userId !== 'string') return;
+
+    const [newMessage] =
+      await sql`insert into message (message, user_id) values (${message}, ${userId}) RETURNING *`;
+
+    // todo: send to openai moderation to verify before sending to other clients
+
+    pubClient.publish(
+      'chat',
+      JSON.stringify({
+        message,
+        user_id: userId,
+        created_at: newMessage.created_at,
+        username,
+        id: newMessage.id,
       })
     );
   });

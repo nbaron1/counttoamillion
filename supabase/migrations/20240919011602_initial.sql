@@ -3,33 +3,33 @@ create table app_user (
   id uuid primary key references auth.users on delete cascade,
   created_at timestamp not null default now(),
   username text not null,
-  high_score bigint not null default 1
+  high_score int not null default 1
 );
 
 CREATE INDEX idx_app_user_id_high_score ON app_user(id, high_score);
 
 create table attempt (
-  id bigserial primary key,
+  id serial primary key,
   created_at timestamp not null default CURRENT_TIMESTAMP,
-  score bigint not null default 1,
+  score int not null default 1,
   user_id uuid references app_user(id)
 );
 
 create table message (
-    id bigserial primary key,
+    id serial primary key,
     created_at timestamp not null default CURRENT_TIMESTAMP,
     user_id uuid not null references app_user(id),
     message text not null
 );
 
 create table game_status (
-    id bigserial primary key,
+    id serial primary key,
     started_at timestamp not null default '2024-09-21 07:30:00 PST',
     ended_at timestamp
 );
 
 -- Alter tables
-alter table app_user add column current_attempt_id bigint references attempt(id);
+alter table app_user add column current_attempt_id int references attempt(id);
 
 -- Enable RLS and create policies
 alter table "app_user" enable row level security;
@@ -54,7 +54,7 @@ language plpgsql
 security definer set search_path = public
 as $$
 declare
-  new_attempt_id bigint;
+  new_attempt_id int;
 begin
   -- create attempt for the new user
   insert into attempt default values returning id into new_attempt_id;

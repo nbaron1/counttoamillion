@@ -16,4 +16,5 @@ export const config = {
   supabaseURL: throwIfMissing('SUPABASE_URL'),
   supabaseSecretKey: throwIfMissing('SUPABASE_SECRET_KEY'),
   databaseURL: throwIfMissing('DATABASE_URL'),
+  redisURL: throwIfMissing('REDIS_URL'),
 } as const;

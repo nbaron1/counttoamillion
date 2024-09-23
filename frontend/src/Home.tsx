@@ -8,7 +8,6 @@ import {
   useState,
 } from 'react';
 import { type AnimationScope, motion } from 'framer-motion';
-
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import './dialog.css';
@@ -1432,6 +1431,110 @@ function Rank() {
   return <p className='text-white'>Rank: {rank}</p>;
 }
 
+function Chat() {
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<
+    | {
+        created_at: string;
+        id: number;
+        message: string;
+        user_id: string;
+        username: string;
+      }[]
+    | null
+  >(null);
+
+  const { isLoading, sendMessage } = useWebsocket(
+    `${config.backendWebsocketHost}/chat`,
+    'chat'
+  );
+  const user = useUser();
+
+  const handleSendMessage = () => {
+    if (messages === null) return;
+
+    // the user shouldn't know if their message was sent or not
+    // todo: get the username persisted (create useUser hook)
+    const optimisticMessage = {
+      message,
+      user_id: user.id,
+      username: user.user_metadata.username,
+      created_at: new Date().toISOString(),
+      id: Math.random() * 1000,
+    };
+
+    setMessages([...messages, optimisticMessage]);
+
+    sendMessage(message);
+  };
+
+  const getMessage = useCallback(async () => {
+    const { data } = await supabase
+      .from('message')
+      .select('*, app_user(username)')
+      .order('created_at', { ascending: true })
+      .limit(10);
+
+    if (data === null) {
+      return null;
+    }
+
+    const formattedData = data.map((message) => ({
+      ...message,
+      username: (message.app_user as { username: string }).username,
+    }));
+
+    setMessages(formattedData);
+  }, []);
+
+  useEffect(() => {
+    getMessage();
+  }, []);
+
+  const subscribe = useSubscribe();
+
+  useEffect(() => {
+    const unsubscribe = subscribe('chat', (data) => {
+      if (messages === null) return;
+
+      const message = JSON.parse(data);
+      setMessages([...messages, message]);
+    });
+
+    return unsubscribe;
+  }, [messages]);
+
+  if (isLoading || !messages) {
+    return <p>Loading...</p>;
+  }
+
+  return (
+    <div className='flex flex-col'>
+      <p>Chat</p>
+      {messages.map(({ message, username, id }) => (
+        <div key={id}>
+          <p className='text-white'>{message}</p>
+          <p className='text-white'>{username}</p>
+        </div>
+      ))}
+      <div className='flex flex-col gap-2'>
+        <input
+          type='text'
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          className='w-72 text-black'
+        />
+        <button
+          className='py-3 px-3 bg-white text-black w-20 rounded-md'
+          onClick={handleSendMessage}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Home() {
   const { sendMessage } = useWebsocket(
     `${config.backendWebsocketHost}/score`,
@@ -1444,19 +1547,17 @@ function Home() {
   const [email, setEmail] = useState('');
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
-  console.log('is here!', { isVerificationRequired });
 
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
       const parsedData = JSON.parse(data);
-      console.log('parsedData', parsedData);
+
       switch (parsedData.type) {
         case 'update-count': {
           setNumber(parsedData.value);
           break;
         }
         case 'verification-required': {
-          console.log('verification required');
           setIsVerificationRequired(true);
           break;
         }
@@ -1494,7 +1595,6 @@ function Home() {
     await supabase.auth.signInWithOtp({ email });
   };
 
-  console.log({ number });
   if (number === null) return;
 
   return (
@@ -1503,6 +1603,7 @@ function Home() {
       <button className='text-white' onClick={() => setPage('leaderboard')}>
         Leaderboard
       </button>
+      <Chat />
       <div className='top-4 right-4 fixed flex flex-col gap-4'>
         {isVerificationRequired && (
           <Turnstile
@@ -1536,7 +1637,6 @@ function Home() {
           placeholder='Write next number'
           value={String(nextNumber)}
           onChange={(event) => {
-            console.log(Number(event.target.value));
             setNextNumber(Number(event.target.value));
           }}
         />

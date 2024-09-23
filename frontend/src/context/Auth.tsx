@@ -5,12 +5,18 @@ import { Spinner } from '../Home';
 
 const UserContext = React.createContext<User | null>(null);
 
-export const useUser = () => React.useContext(UserContext);
+export const useUser = () => {
+  const user = React.useContext(UserContext);
+
+  if (!user) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+
+  return user;
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // const [user, setUser] = useState<User | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -19,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { session },
       } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      setIsLoading(false);
     };
     setSessionUser();
 
@@ -27,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_, session) => {
         setUser(session?.user ?? null);
-        setIsLoading(false);
       }
     );
 
@@ -43,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await supabase.auth.signInAnonymously({
         options: {
           data: {
+            // TODO: Replace with a random name
             username: 'PLACEHOLDER_NAME_HERE',
           },
         },
@@ -50,12 +55,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log({ response });
     };
 
-    if (isLoading || user) return;
+    if (user) return;
 
     handleAnonymousAuth();
-  }, [user, isLoading]);
+  }, [user]);
 
-  if (isLoading) {
+  if (!user) {
     return (
       <div className='text-white fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2'>
         <Spinner />
@@ -65,27 +70,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
 }
-
-//   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-//   useEffect(() => {
-//     const auth = async () => {};
-
-//     auth().then(() => {
-//       setIsAuthenticated(true);
-//     });
-//   }, []);
-
-//   if (!isAuthenticated) {
-//     return (
-//       <div className='text-white fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2'>
-//         <Spinner />
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
-//       {children}
-//     </AuthContext.Provider>
-//   );
