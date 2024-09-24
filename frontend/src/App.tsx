@@ -6,6 +6,7 @@ import { Leaderboard } from './Leaderboard';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { GoogleAuthCallback } from './GoogleAuthCallback';
 import { FailedAuth } from './FailedAuth';
+import { Logout } from './Logout';
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,10 @@ const router = createBrowserRouter([
   {
     path: '/auth/failed',
     element: <FailedAuth />,
+  },
+  {
+    path: '/logout',
+    element: <Logout />,
   },
 ]);
 

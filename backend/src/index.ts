@@ -107,6 +107,19 @@ app.post('/auth/google', async (req, res) => {
 
     const { email } = await userInfoResponse.json();
 
+    const [existingUser] =
+      await sql`select * from app_user where email = ${email}`;
+
+    if (existingUser) {
+      const [session] =
+        await sql`insert into session (id, user_id) values (gen_random_uuid(), ${existingUser.id}) returning id`;
+
+      res.cookie('session', session.id);
+      res.header('location', '/');
+      res.status(200).json({ success: true });
+      return;
+    }
+
     if (typeof email !== 'string') {
       res.header('location', '/auth/failed');
       res.status(400).json({ error: 'Bad Request', success: false });
@@ -156,6 +169,22 @@ app.post('/auth/google', async (req, res) => {
   }
 });
 
+app.post('/auth/logout', async (req, res) => {
+  try {
+    const sessionToken = req.cookies.session;
+
+    if (typeof sessionToken === 'string') {
+      await sql`delete from session where id = ${sessionToken}`;
+    }
+
+    res.header('location', '/auth/guest');
+    res.clearCookie('session');
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
 app.post('/auth/guest', async (req, res) => {
   try {
     const sessionToken = req.cookies.session;
@@ -187,15 +216,13 @@ app.post('/auth/guest', async (req, res) => {
       INSERT INTO session (id, user_id)
       VALUES (gen_random_uuid(), ${newUser.id}) RETURNING id`;
 
-      console.log({ newSession });
-
       const [newAttempt] = await sql`
       INSERT INTO attempt (user_id)
       VALUES (${newUser.id}) RETURNING id`;
 
       await sql`
       UPDATE app_user
-      SET current_attempt_id = ${newAttempt.id}`;
+      SET current_attempt_id = ${newAttempt.id} where id = ${newUser.id}`;
 
       return newSession.id;
     });

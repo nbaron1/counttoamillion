@@ -520,9 +520,9 @@ function Home() {
               My content
             </a>
             {user.email ? (
-              <button className='text-white' type='button'>
+              <a className='text-white' href='/logout'>
                 Logout
-              </button>
+              </a>
             ) : (
               <a className='underline text-white' href='/auth/google'>
                 Save your progress

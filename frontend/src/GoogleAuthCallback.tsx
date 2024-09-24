@@ -1,8 +1,10 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Spinner } from './Home';
 import { authAxios } from './lib/axios';
 
 export function GoogleAuthCallback() {
+  const isMakingRequest = useRef(false);
+
   const authGoogle = useCallback(async (code: string) => {
     try {
       await authAxios.post('/auth/google', { code });
@@ -13,6 +15,9 @@ export function GoogleAuthCallback() {
   }, []);
 
   useEffect(() => {
+    if (isMakingRequest.current) return;
+    isMakingRequest.current = true;
+
     const code = new URLSearchParams(window.location.search).get('code');
 
     if (!code) {
