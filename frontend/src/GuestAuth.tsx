@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { authAxios } from './lib/axios';
 import { Spinner } from './Home';
 
-export function AuthGuest() {
+export function GuestAuth() {
   const isMakingRequest = useRef(false);
 
   const auth = useCallback(async () => {

@@ -7,6 +7,7 @@ type User = {
   crated_at: string;
   username: string;
   high_score: number;
+  email: string | null;
 };
 
 const UserContext = createContext<null | User>(null);

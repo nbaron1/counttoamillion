@@ -18,4 +18,7 @@ export const config = {
   maxRequestsSinceVerification: Number(
     throwIfMissing('MAX_REQUESTS_SINCE_VERIFICATION')
   ),
+  googleRedirectURI: throwIfMissing('GOOGLE_REDIRECT_URI'),
+  googleClientId: throwIfMissing('GOOGLE_CLIENT_ID'),
+  googleClientSecret: throwIfMissing('GOOGLE_CLIENT_SECRET'),
 } as const;

@@ -435,7 +435,7 @@ function Home() {
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
   const user = useUser();
-
+  console.log({ user });
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
       const parsedData = JSON.parse(data);
@@ -505,7 +505,7 @@ function Home() {
         Leaderboard
       </button>
       <Chat /> */}
-      <div className='top-4 right-4 fixed flex flex-col gap-4'>
+      <div className='top-20 right-4 fixed flex flex-col gap-4'>
         {isVerificationRequired && (
           <Turnstile
             siteKey={config.turnstileSiteKey}
@@ -519,9 +519,15 @@ function Home() {
             <a className='text-white' href='/content'>
               My content
             </a>
-            <button className='text-white' type='button'>
-              Logout
-            </button>
+            {user.email ? (
+              <button className='text-white' type='button'>
+                Logout
+              </button>
+            ) : (
+              <a className='underline text-white' href='/auth/google'>
+                Save your progress
+              </a>
+            )}
           </div>
           <div className='flex justify-between'>
             <div className='flex flex-col text-white'>

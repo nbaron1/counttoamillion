@@ -1,9 +1,11 @@
-import { AuthGoogle } from './AuthGoogle';
-import { AuthGuest } from './AuthGuest';
+import { GoogleAuth } from './GoogleAuth';
+import { GuestAuth } from './GuestAuth';
 import { UserProvider } from './context/User';
 import { Home } from './Home';
 import { Leaderboard } from './Leaderboard';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { GoogleAuthCallback } from './GoogleAuthCallback';
+import { FailedAuth } from './FailedAuth';
 
 const router = createBrowserRouter([
   {
@@ -24,11 +26,19 @@ const router = createBrowserRouter([
   },
   {
     path: '/auth/guest',
-    element: <AuthGuest />,
+    element: <GuestAuth />,
+  },
+  {
+    path: '/auth/google/callback',
+    element: <GoogleAuthCallback />,
   },
   {
     path: '/auth/google',
-    element: <AuthGoogle />,
+    element: <GoogleAuth />,
+  },
+  {
+    path: '/auth/failed',
+    element: <FailedAuth />,
   },
 ]);
 
