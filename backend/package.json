@@ -21,6 +21,7 @@
     "redis": "^4.7.0"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/express-ws": "^3.0.5",
     "ts-node-dev": "^2.0.0",
