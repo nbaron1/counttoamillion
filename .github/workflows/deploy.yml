@@ -47,7 +47,7 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend
-    needs: [deploy-worker, migrate-db]
+    # needs: [deploy-worker, migrate-db]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
