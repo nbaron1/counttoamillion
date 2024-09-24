@@ -2,7 +2,8 @@ create table app_user (
   id uuid primary key,
   created_at timestamp not null default now(),
   username text not null,
-  high_score int not null default 1
+  high_score int not null default 1,
+  email text
 );
 
 CREATE INDEX idx_app_user_id_high_score ON app_user(id, high_score);
@@ -29,9 +30,26 @@ create table game_status (
     ended_at timestamp
 );
 
+insert into game_status default values; 
+
 create table session (
 	id uuid primary key,
 	created_at timestamp not null default now(),
 	expires_at timestamp not null default now() + interval '7 days',
 	user_id uuid references app_user(id) on delete cascade
+);
+
+create table reset (
+  id serial primary key,
+  price_paid numeric(15, 2) not null, -- 15 digits, 2 decimal places
+  created_at timestamp not null default CURRENT_TIMESTAMP,
+  created_by_user_id uuid references app_user(id),
+  user_id uuid references app_user(id)
+);
+
+create table great_reset (
+  id serial primary key,
+  price_paid numeric(15, 2) not null, -- 15 digits, 2 decimal places
+  created_at timestamp not null default CURRENT_TIMESTAMP,
+  created_by_user_id uuid references app_user(id)
 );

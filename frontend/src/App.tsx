@@ -1,4 +1,5 @@
-import { Auth } from './Auth';
+import { AuthGoogle } from './AuthGoogle';
+import { AuthGuest } from './AuthGuest';
 import { UserProvider } from './context/User';
 import { Home } from './Home';
 import { Leaderboard } from './Leaderboard';
@@ -22,8 +23,12 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: '/auth',
-    element: <Auth />,
+    path: '/auth/guest',
+    element: <AuthGuest />,
+  },
+  {
+    path: '/auth/google',
+    element: <AuthGoogle />,
   },
 ]);
 

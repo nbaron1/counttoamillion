@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
-app.post('/auth', async (req, res) => {
+app.post('/auth/guest', async (req, res) => {
   try {
     const sessionToken = req.cookies.session;
 
@@ -50,6 +50,7 @@ app.post('/auth', async (req, res) => {
       }
     }
 
+    // todo: make sure the username is unique
     const username = generateRandomUsername();
 
     const sessionId = await sql.begin(async (sql) => {
@@ -60,6 +61,8 @@ app.post('/auth', async (req, res) => {
       const [newSession] = await sql`
       INSERT INTO session (id, user_id)
       VALUES (gen_random_uuid(), ${newUser.id}) RETURNING id`;
+
+      console.log({ newSession });
 
       const [newAttempt] = await sql`
       INSERT INTO attempt (user_id)
@@ -94,7 +97,7 @@ const protectRoute = async (
   const sessionToken = req.cookies.session;
 
   if (typeof sessionToken !== 'string') {
-    res.header('location', '/auth');
+    res.header('location', '/auth/guest');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
@@ -103,7 +106,7 @@ const protectRoute = async (
     await sql`select * from session inner join app_user on session.user_id = app_user.id where session.id = ${sessionToken}`;
 
   if (!session) {
-    res.header('location', '/auth');
+    res.header('location', '/auth/guest');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
@@ -111,7 +114,7 @@ const protectRoute = async (
   const isExpired = new Date(session.expires_at).getTime() < Date.now();
 
   if (isExpired) {
-    res.header('location', '/auth');
+    res.header('location', '/auth/guest');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
@@ -120,7 +123,7 @@ const protectRoute = async (
     await sql`select * from app_user where id = ${session.user_id}`;
 
   if (!user) {
-    res.header('location', '/auth');
+    res.header('location', '/auth/guest');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
@@ -309,8 +312,9 @@ app.ws('/score', async (ws, request) => {
 
             const newRequestsSinceVerification = requestsSinceVerification + 1;
 
-            // todo: use env variable for max requests per verification
-            const isVerificationRequired = newRequestsSinceVerification >= 5;
+            const isVerificationRequired =
+              newRequestsSinceVerification >=
+              config.maxRequestsSinceVerification;
 
             if (isVerificationRequired) {
               ws.send(JSON.stringify({ type: 'verification-required' }));
@@ -332,8 +336,8 @@ app.ws('/score', async (ws, request) => {
 
           const newRequestsSinceVerification = requestsSinceVerification + 1;
 
-          // todo: use env variable for max requests per verification
-          const isVerificationRequired = newRequestsSinceVerification >= 5;
+          const isVerificationRequired =
+            newRequestsSinceVerification >= config.maxRequestsSinceVerification;
 
           if (isVerificationRequired) {
             ws.send(JSON.stringify({ type: 'verification-required' }));
@@ -374,13 +378,35 @@ const getUserRank = async (
 };
 
 app.ws('/chat', async (ws, request) => {
-  const token = request.query.token;
+  const sessionToken = request.cookies.session;
 
-  if (typeof token !== 'string') {
+  if (typeof sessionToken !== 'string') {
     ws.close(1008, 'Unauthorized');
     return;
   }
 
+  const [session] =
+    await sql`select * from session inner join app_user on session.user_id = app_user.id where session.id = ${sessionToken}`;
+
+  if (!session) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  const isExpired = new Date(session.expires_at).getTime() < Date.now();
+
+  if (isExpired) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  const [user] =
+    await sql`select * from app_user where id = ${session.user_id}`;
+
+  if (!user) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
   // const { data: userResult } = await supabase.auth.getUser(token);
 
   // if (!userResult.user) {
@@ -391,7 +417,7 @@ app.ws('/chat', async (ws, request) => {
   // const userId = userResult.user.id;
   // const username = userResult.user.user_metadata.username;
 
-  const userId = '234';
+  const userId = user.id;
   const username = '567';
 
   // subscribe to chat messages

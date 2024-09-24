@@ -15,4 +15,7 @@ export const config = {
   turnstileSecret: throwIfMissing('CF_TURNSTILE_SECRET'),
   databaseURL: throwIfMissing('DATABASE_URL'),
   redisURL: throwIfMissing('REDIS_URL'),
+  maxRequestsSinceVerification: Number(
+    throwIfMissing('MAX_REQUESTS_SINCE_VERIFICATION')
+  ),
 } as const;
