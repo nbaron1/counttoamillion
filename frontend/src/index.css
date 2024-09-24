@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #6813d3;
+  --secondary: #8f35ff;
+  --teritiary: #b880ff;
+}
+
 body {
-  background-color: black;
+  background-color: var(--primary);
 }
