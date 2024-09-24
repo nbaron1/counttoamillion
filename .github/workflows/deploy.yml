@@ -63,11 +63,10 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          PUBLIC_BACKEND_HOST: https://api.counttoamillion.com
-          PUBLIC_BACKEND_WEBSOCKET_HOST: wss://api.counttoamillion.com
-          PUBLIC_CF_TURNSTILE_KEY: ${{ secrets.CF_TURNSTILE_SITE_KEY }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_BACKEND_API_HOST: https://api.counttoamillion.com
+          VITE_BACKEND_WEBSOCKET_HOST: wss://api.counttoamillion.com
+          VITE_CF_TURNSTILE_KEY: ${{ secrets.CF_TURNSTILE_SITE_KEY }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
