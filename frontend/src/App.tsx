@@ -1,27 +1,32 @@
-import { AuthProvider } from './context/Auth';
-import { PageProvider, usePage } from './context/Page';
+import { Auth } from './Auth';
+import { UserProvider } from './context/User';
 import { Home } from './Home';
 import { Leaderboard } from './Leaderboard';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
-function Router() {
-  const { page } = usePage();
-
-  switch (page) {
-    case 'home': {
-      return <Home />;
-    }
-    case 'leaderboard': {
-      return <Leaderboard />;
-    }
-  }
-}
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: (
+      <UserProvider>
+        <Home />
+      </UserProvider>
+    ),
+  },
+  {
+    path: '/leaderboard',
+    element: (
+      <UserProvider>
+        <Leaderboard />
+      </UserProvider>
+    ),
+  },
+  {
+    path: '/auth',
+    element: <Auth />,
+  },
+]);
 
 export function App() {
-  return (
-    <PageProvider>
-      <AuthProvider>
-        <Router />
-      </AuthProvider>
-    </PageProvider>
-  );
+  return <RouterProvider router={router} />;
 }

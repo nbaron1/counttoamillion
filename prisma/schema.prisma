@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @default(dbgenerated("now() + interval '7 days'")) @map("expires_at")
+  userId    String   @map("user_id") @db.Uuid
+  user      AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model AppUser {
+  id               String   @id @default(uuid()) @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+  username         String
+  highScore        Int      @default(1) @map("high_score")
+  email            String?
+  currentAttemptId Int      @map("current_attempt_id")
+
+  attempts       Attempt[]
+  messages       Message[]
+  Session        Session[]
+  currentAttempt Attempt   @relation(name: "Current attempt", fields: [currentAttemptId], references: [id])
+
+  @@index([id, highScore], name: "idx_app_user_id_high_score")
+  @@map("app_user")
+}
+
+model Attempt {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now()) @map("created_at")
+  score     Int       @default(1)
+  userId    String    @map("user_id") @db.Uuid
+  user      AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  AppUser   AppUser[]
+
+  @@map("attempt")
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    String   @map("user_id") @db.Uuid
+  message   String
+  user      AppUser  @relation(fields: [userId], references: [id])
+
+  @@map("message")
+}
+
+model GameStatus {
+  id        Int       @id @default(autoincrement())
+  startedAt DateTime  @default(dbgenerated("'2024-09-21 07:30:00 PST'::timestamp")) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  @@map("game_status")
+}

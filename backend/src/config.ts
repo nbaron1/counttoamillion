@@ -13,8 +13,6 @@ const throwIfMissing = (env: string): string => {
 export const config = {
   port: process.env.PORT ? Number(process.env.PORT) : 5000,
   turnstileSecret: throwIfMissing('CF_TURNSTILE_SECRET'),
-  supabaseURL: throwIfMissing('SUPABASE_URL'),
-  supabaseSecretKey: throwIfMissing('SUPABASE_SECRET_KEY'),
   databaseURL: throwIfMissing('DATABASE_URL'),
   redisURL: throwIfMissing('REDIS_URL'),
 } as const;

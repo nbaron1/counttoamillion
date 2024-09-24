@@ -2,20 +2,22 @@ import express, { NextFunction, Request, Response } from 'express';
 import expressWs from 'express-ws';
 import cors from 'cors';
 import { config } from './config';
-import { createClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
 import { sql } from './sql';
 import { pubClient, subClient } from './redis';
+import cookieParser from 'cookie-parser';
+import { generateRandomUsername } from './utils/generateARandomUsername';
 
 const app = expressWs(express()).app;
-
-const supabase = createClient<Database>(
-  config.supabaseURL,
-  config.supabaseSecretKey
-);
+app.use(cookieParser());
 
 if (process.env.NODE_ENV === 'development') {
-  app.use(cors({ origin: ['http://localhost:3000'] }));
+  app.use(
+    cors({
+      origin: ['http://localhost:3000'],
+      credentials: true,
+      exposedHeaders: ['Location'],
+    })
+  );
 } else {
   app.use(
     cors({
@@ -23,11 +25,64 @@ if (process.env.NODE_ENV === 'development') {
         'https://counttoamillion.com',
         'https://www.counttoamillion.com',
       ],
+      credentials: true,
+      exposedHeaders: ['Location'],
     })
   );
 }
 
-app.get('/health', (req, res) => {
+app.post('/auth', async (req, res) => {
+  try {
+    const sessionToken = req.cookies.session;
+
+    if (typeof sessionToken === 'string') {
+      const [session] =
+        await sql`select * from session where id = ${sessionToken}`;
+
+      if (session) {
+        const isExpired = new Date(session.expires_at).getTime() > Date.now();
+
+        if (!isExpired) {
+          res.header('location', '/');
+          res.status(200).json({ success: true });
+          return;
+        }
+      }
+    }
+
+    const username = generateRandomUsername();
+
+    const sessionId = await sql.begin(async (sql) => {
+      const [newUser] = await sql`
+      INSERT INTO app_user (id, username)
+      VALUES (gen_random_uuid(), ${username}) RETURNING id`;
+
+      const [newSession] = await sql`
+      INSERT INTO session (id, user_id)
+      VALUES (gen_random_uuid(), ${newUser.id}) RETURNING id`;
+
+      const [newAttempt] = await sql`
+      INSERT INTO attempt (user_id)
+      VALUES (${newUser.id}) RETURNING id`;
+
+      await sql`
+      UPDATE app_user
+      SET current_attempt_id = ${newAttempt.id}`;
+
+      return newSession.id;
+    });
+
+    res.cookie('session', sessionId);
+    res.header('location', '/');
+
+    res.status(200).send({ success: true });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
+app.get('/health', (_, res) => {
   res.send('OK');
 });
 
@@ -36,31 +91,78 @@ const protectRoute = async (
   res: Response,
   next: NextFunction
 ) => {
-  const authorization = req.headers.authorization;
+  const sessionToken = req.cookies.session;
 
-  if (typeof authorization !== 'string') {
+  if (typeof sessionToken !== 'string') {
+    res.header('location', '/auth');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
-  const token = authorization.split('Bearer ')[1];
+  const [session] =
+    await sql`select * from session inner join app_user on session.user_id = app_user.id where session.id = ${sessionToken}`;
 
-  if (!token) {
+  if (!session) {
+    res.header('location', '/auth');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
-  const { data: userResult } = await supabase.auth.getUser(token);
+  const isExpired = new Date(session.expires_at).getTime() < Date.now();
 
-  if (!userResult.user) {
+  if (isExpired) {
+    res.header('location', '/auth');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
-  res.locals.userId = userResult.user.id;
+  const [user] =
+    await sql`select * from app_user where id = ${session.user_id}`;
+
+  if (!user) {
+    res.header('location', '/auth');
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  res.locals.userId = user.id;
 
   next();
+
+  await sql`update session set expires_at = now() + interval '7 days' where id = ${sessionToken}`;
 };
+
+app.get('/game-status', protectRoute, async (req, res) => {
+  try {
+    const [gameStatus] = await sql`select * from game_status where id = 1`;
+
+    res.status(200).json({ data: { gameStatus }, success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
+app.get('/users/me', protectRoute, async (req, res) => {
+  try {
+    const userId = res.locals.userId;
+
+    if (typeof userId !== 'string') {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const [user] = await sql`select * from app_user where id = ${userId}`;
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found', success: false });
+      return;
+    }
+
+    res.status(200).json({ data: { user }, success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
 
 app.get('/users/me/rank', protectRoute, async (req, res) => {
   try {
@@ -78,113 +180,155 @@ app.get('/users/me/rank', protectRoute, async (req, res) => {
 });
 
 app.ws('/score', async (ws, request) => {
-  const token = request.query.token;
+  try {
+    const sessionToken = request.cookies.session;
 
-  if (typeof token !== 'string') {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
+    if (typeof sessionToken !== 'string') {
+      ws.close(1008, 'Unauthorized');
+      return;
+    }
 
-  const { data: userResult } = await supabase.auth.getUser(token);
+    const [session] =
+      await sql`select * from session inner join app_user on session.user_id = app_user.id where session.id = ${sessionToken}`;
 
-  if (!userResult.user) {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
+    if (!session) {
+      ws.close(1008, 'Unauthorized');
+      return;
+    }
 
-  const userId = userResult.user.id;
+    const isExpired = new Date(session.expires_at).getTime() < Date.now();
 
-  const [currentAttempt] =
-    await sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
+    if (isExpired) {
+      ws.close(1008, 'Unauthorized');
+      return;
+    }
 
-  const currentScore = Number(currentAttempt.score);
+    const [user] =
+      await sql`select * from app_user where id = ${session.user_id}`;
 
-  ws.send(
-    JSON.stringify({
-      type: 'update-count',
-      value: currentScore,
-    })
-  );
+    if (!user) {
+      ws.close(1008, 'Unauthorized');
+      return;
+    }
 
-  let verificationRequired = true;
-  let requestsSinceVerification = 0;
+    const [currentAttempt] =
+      await sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${user.id} limit 1`;
 
-  ws.on('message', async (message) => {
-    const parsedData = JSON.parse(message.toString());
+    if (!currentAttempt) {
+      ws.close(1008, 'Unauthorized');
+    }
 
-    switch (parsedData.type) {
-      case 'verify': {
-        if (typeof parsedData.token !== 'string') {
-          return;
-        }
+    const currentScore = Number(currentAttempt.score);
 
-        try {
-          const response = await fetch(
-            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                response: parsedData.token,
-                secret: config.turnstileSecret,
-              }),
-              headers: {
-                'Content-Type': 'application/json',
-              },
+    ws.send(
+      JSON.stringify({
+        type: 'update-count',
+        value: currentScore,
+      })
+    );
+
+    let verificationRequired = true;
+    let requestsSinceVerification = 0;
+
+    ws.on('message', async (message) => {
+      const parsedData = JSON.parse(message.toString());
+
+      switch (parsedData.type) {
+        case 'verify': {
+          if (typeof parsedData.token !== 'string') {
+            return;
+          }
+
+          try {
+            const response = await fetch(
+              'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  response: parsedData.token,
+                  secret: config.turnstileSecret,
+                }),
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error('Verification failed');
             }
-          );
 
-          if (!response.ok) {
-            throw new Error('Verification failed');
+            const body = await response.json();
+
+            if (
+              !body ||
+              typeof body !== 'object' ||
+              !('success' in body) ||
+              body.success !== true
+            ) {
+              throw new Error('Verification failed');
+            }
+
+            verificationRequired = false;
+            requestsSinceVerification = 0;
+
+            ws.send(JSON.stringify({ type: 'verified' }));
+          } catch (error) {
+            ws.send(JSON.stringify({ type: 'verification-required' }));
           }
 
-          const body = await response.json();
-
-          if (
-            !body ||
-            typeof body !== 'object' ||
-            !('success' in body) ||
-            body.success !== true
-          ) {
-            throw new Error('Verification failed');
+          break;
+        }
+        case 'update-count': {
+          if (verificationRequired) {
+            ws.send(JSON.stringify({ type: 'verification-required' }));
+            return;
           }
 
-          verificationRequired = false;
-          requestsSinceVerification = 0;
+          if (typeof parsedData.value !== 'number') {
+            return;
+          }
 
-          ws.send(JSON.stringify({ type: 'verified' }));
-        } catch (error) {
-          ws.send(JSON.stringify({ type: 'verification-required' }));
-        }
+          // todo: refactor into one userId
+          const [currentAttempt] =
+            await sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${user.id} limit 1`;
 
-        break;
-      }
-      case 'update-count': {
-        if (verificationRequired) {
-          ws.send(JSON.stringify({ type: 'verification-required' }));
-          return;
-        }
+          const currentCount = Number(currentAttempt.score);
 
-        if (typeof parsedData.value !== 'number') {
-          return;
-        }
-
-        // todo: refactor into one userId
-        const [currentAttempt] =
-          await sql`select score from app_user join attempt on app_user.current_attempt_id = attempt.id where app_user.id = ${userId} limit 1`;
-
-        const currentCount = Number(currentAttempt.score);
-
-        if (currentCount + 1 != parsedData.value) {
-          await sql`WITH inserted AS (
+          if (currentCount + 1 != parsedData.value) {
+            await sql`WITH inserted AS (
 				       INSERT INTO attempt (user_id, score)
-				       VALUES (${userId}, 1)
+				       VALUES (${user.id}, 1)
 				       RETURNING id
 				       )
 				       UPDATE app_user
 				       SET current_attempt_id = (SELECT id FROM inserted)
-				       WHERE id = ${userId}`;
+				       WHERE id = ${user.id}`;
 
-          ws.send(JSON.stringify({ type: 'update-count', value: 1 }));
+            ws.send(JSON.stringify({ type: 'update-count', value: 1 }));
+
+            const newRequestsSinceVerification = requestsSinceVerification + 1;
+
+            // todo: use env variable for max requests per verification
+            const isVerificationRequired = newRequestsSinceVerification >= 5;
+
+            if (isVerificationRequired) {
+              ws.send(JSON.stringify({ type: 'verification-required' }));
+            }
+
+            verificationRequired = isVerificationRequired;
+            requestsSinceVerification = newRequestsSinceVerification;
+
+            return;
+          }
+
+          await sql`UPDATE attempt
+				     SET score = ${parsedData.value}
+				     WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = ${user.id})`;
+
+          ws.send(
+            JSON.stringify({ type: 'update-count', value: parsedData.value })
+          );
 
           const newRequestsSinceVerification = requestsSinceVerification + 1;
 
@@ -197,32 +341,12 @@ app.ws('/score', async (ws, request) => {
 
           verificationRequired = isVerificationRequired;
           requestsSinceVerification = newRequestsSinceVerification;
-
-          return;
         }
-
-        await sql`UPDATE attempt
-				     SET score = ${parsedData.value}
-				     WHERE id = (SELECT current_attempt_id FROM app_user WHERE id = ${userId})`;
-
-        ws.send(
-          JSON.stringify({ type: 'update-count', value: parsedData.value })
-        );
-
-        const newRequestsSinceVerification = requestsSinceVerification + 1;
-
-        // todo: use env variable for max requests per verification
-        const isVerificationRequired = newRequestsSinceVerification >= 5;
-
-        if (isVerificationRequired) {
-          ws.send(JSON.stringify({ type: 'verification-required' }));
-        }
-
-        verificationRequired = isVerificationRequired;
-        requestsSinceVerification = newRequestsSinceVerification;
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.log('Websocket error', error);
+  }
 });
 
 const getUserRank = async (
@@ -257,15 +381,18 @@ app.ws('/chat', async (ws, request) => {
     return;
   }
 
-  const { data: userResult } = await supabase.auth.getUser(token);
+  // const { data: userResult } = await supabase.auth.getUser(token);
 
-  if (!userResult.user) {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
+  // if (!userResult.user) {
+  //   ws.close(1008, 'Unauthorized');
+  //   return;
+  // }
 
-  const userId = userResult.user.id;
-  const username = userResult.user.user_metadata.username;
+  // const userId = userResult.user.id;
+  // const username = userResult.user.user_metadata.username;
+
+  const userId = '234';
+  const username = '567';
 
   // subscribe to chat messages
   subClient.subscribe('chat', (message) => {

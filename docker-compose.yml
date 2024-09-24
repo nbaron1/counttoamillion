@@ -1,6 +1,20 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
   redis:
     image: redis:latest
     container_name: redis_container
@@ -9,10 +23,11 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - redis_network
+      - app_network
 
 volumes:
   redis_data:
+  postgres_data:
 
 networks:
-  redis_network:
+  app_network:

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
-import { usePage } from './context/Page';
-import { useAxios } from './lib/axios';
-import { useUser } from './context/Auth';
+import { authAxios } from './lib/axios';
+import { useUser } from './context/User';
+import { redirect } from 'react-router-dom';
 
 const PAGE_SIZE = 50;
 
@@ -20,17 +19,18 @@ function LeaderboardPage({ page }: { page: number }) {
   >([]);
 
   const getPage = useCallback(async () => {
-    const { data: scores } = await supabase
-      .from('app_user')
-      .select('*')
-      .order('high_score', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    // const { data: scores } = await supabase
+    //   .from('app_user')
+    //   .select('*')
+    //   .order('high_score', { ascending: false })
+    //   .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    // todo: get /users?page=1&limit=50
 
     if (!scores) return;
 
     setScores(scores);
     setIsLoading(false);
-  }, [page]);
+  }, [scores]);
 
   useEffect(() => {
     getPage();
@@ -58,32 +58,29 @@ function LeaderboardPage({ page }: { page: number }) {
 
 export function Leaderboard() {
   const [searchTerm, setSearchTerm] = useState('');
-  const axios = useAxios();
-  const user = useUser();
 
   const [leaderboardState, setLeaderboardState] = useState<
     'global' | 'your-ranking'
   >('global');
 
-  const { setPage: setDisplayedPage } = usePage();
-
   const [page, setPage] = useState(1);
   const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
 
-  const getUsersCount = async () => {
-    const { count } = await supabase
-      .from('app_user')
-      .select('*', { count: 'exact', head: true });
+  const user = useUser();
 
-    if (!count) return;
+  const getUsersCount = async (): Promise<number> => {
+    const response = await authAxios.get('/users/count');
 
-    const pageCount = Math.ceil(count / PAGE_SIZE);
-    setNumberOfPages(pageCount);
+    if (!response.data.success) {
+      throw new Error('Failed to get users count');
+    }
+
+    return response.data.data.count;
   };
 
   const getRank = useCallback(async () => {
     try {
-      const response = await axios.get('/users/me/rank');
+      const response = await authAxios.get('/users/me/rank');
 
       if (!response.data.success) {
         throw new Error('Failed to get rank');
@@ -101,23 +98,24 @@ export function Leaderboard() {
       await oneSecond;
       return await getRank();
     }
-  }, [axios]);
+  }, []);
 
   useEffect(() => {
-    getUsersCount();
+    getUsersCount().then((count) => {
+      const pageCount = Math.ceil(count / PAGE_SIZE);
+      setNumberOfPages(pageCount);
+    });
   }, []);
 
   useEffect(() => {
     if (leaderboardState !== 'your-ranking') return;
 
-    // todo: find a better solution
-    setTimeout(() => {
-      const element = document.getElementById(`score-${user.id}`);
-      if (!element) return;
+    // todo: find a better solution to scroll
+    const element = document.getElementById(`score-${user.id}`);
+    if (!element) return;
 
-      element.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  }, [leaderboardState, user.id]);
+    element.scrollIntoView({ behavior: 'smooth' });
+  }, [user, leaderboardState]);
 
   const handleSelectYourRanking = async () => {
     if (leaderboardState === 'your-ranking') {
@@ -144,7 +142,7 @@ export function Leaderboard() {
   return (
     <>
       <div className='flex flex-col max-h-screen'>
-        <button onClick={() => setDisplayedPage('home')}>Home</button>
+        <button onClick={() => redirect('/home')}>Home</button>
         <input
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './dialog.css';
 import './hide-scrollbar.css';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { supabase } from './lib/supabase';
 import { config } from './lib/config';
-import { useUser } from './context/Auth';
-import { usePage } from './context/Page';
-import { useAxios } from './lib/axios';
+import { authAxios } from './lib/axios';
+import axios from 'axios';
+import { useUser } from './context/User';
+import { redirect } from 'react-router-dom';
 
 const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
 
@@ -89,17 +89,18 @@ const useWebsocket = (connectionURL: string, topic: string) => {
     const connectWebSocket = async () => {
       if (!user) return; // Only connect if user is authenticated
 
-      const { data, error } = await supabase.auth.getSession();
+      // const { data, error } = await supabase.auth.getSession();
 
-      if (error) {
-        console.error('Error getting session:', error);
-        return;
-      }
+      // if (error) {
+      //   console.error('Error getting session:', error);
+      //   return;
+      // }
 
-      if (!data.session) return;
-      if (websocketRef.current) return;
+      // if (!data.session) return;
+      // if (websocketRef.current) return;
 
-      const accessToken = data.session.access_token;
+      // const accessToken = data.session.access_token;
+      const accessToken = '123';
       const url = `${connectionURL}?token=${accessToken}`;
 
       const websocket = new WebSocket(url);
@@ -190,12 +191,14 @@ const useGameStatus = () => {
 
   const getGameStatus = useCallback(async () => {
     try {
-      const { data } = await supabase.from('game_status').select('*');
+      const response = await axios.get('/game-status');
+
+      // const { data } = await supabase.from('game_status').select('*');
 
       // todo: sentry error handling
-      if (!data) return;
+      if (!response) return;
 
-      setGameStatusData(data[0]);
+      setGameStatusData(response.data);
     } catch (error) {
       console.log(error);
       // const oneSecond = new Promise<void>((resolve) => {
@@ -217,17 +220,21 @@ const useGameStatus = () => {
 
 function Rank() {
   const [rank, setRank] = useState<number | null>(null);
-  const axios = useAxios();
 
   const updateRank = useCallback(async () => {
     try {
-      const response = await axios.get(
+      const response = await authAxios.get(
         `${config.backendApiHost}/users/me/rank`
       );
+      if (!response.data.success) {
+        throw new Error('Failed to get rank');
+      }
 
-      setRank(response.data.rank);
-    } catch (error) {}
-  }, [axios]);
+      setRank(response.data.data.rank);
+    } catch {
+      // we will call this again in 15 seconds so if it fails we don't need to do anything
+    }
+  }, []);
 
   useEffect(() => {
     updateRank();
@@ -258,13 +265,12 @@ function Chat() {
       }[]
     | null
   >(null);
+  const user = useUser();
 
   const { isLoading, sendMessage } = useWebsocket(
     `${config.backendWebsocketHost}/chat`,
     'chat'
   );
-
-  const user = useUser();
 
   const handleSendMessage = () => {
     if (messages === null) return;
@@ -274,7 +280,7 @@ function Chat() {
     const optimisticMessage = {
       message,
       user_id: user.id,
-      username: user.user_metadata.username,
+      username: user.username,
       created_at: new Date().toISOString(),
       id: Math.random() * 1000,
     };
@@ -285,27 +291,33 @@ function Chat() {
   };
 
   const getMessage = useCallback(async () => {
-    const { data } = await supabase
-      .from('message')
-      .select('*, app_user(username)')
-      .order('created_at', { ascending: true })
-      .limit(10);
+    try {
+      const response = await axios.get('/messages');
 
-    if (data === null) {
-      return null;
+      if (!response.data.success) {
+        throw new Error('Failed to get messages');
+      }
+
+      return response.data.data;
+    } catch {
+      const oneSecond = new Promise((resolve) => setTimeout(resolve, 1000));
+
+      await oneSecond;
+
+      return await getMessage();
     }
-
-    const formattedData = data.map((message) => ({
-      ...message,
-      username: (message.app_user as { username: string }).username,
-    }));
-
-    setMessages(formattedData);
   }, []);
 
   useEffect(() => {
-    getMessage();
-  }, []);
+    // todo: enable
+    // getMessage().then((data) => {
+    //   const formattedData = data.map((message) => ({
+    //     ...message,
+    //     username: (message.app_user as { username: string }).username,
+    //   }));
+    //   setMessages(formattedData);
+    // });
+  }, [getMessage]);
 
   const subscribe = useSubscribe();
 
@@ -318,7 +330,7 @@ function Chat() {
     });
 
     return unsubscribe;
-  }, [messages]);
+  }, [messages, subscribe]);
 
   if (isLoading || !messages) {
     return <p>Loading...</p>;
@@ -356,7 +368,6 @@ function Home() {
     `${config.backendWebsocketHost}/score`,
     'score'
   );
-  const { setPage } = usePage();
   const gameStatus = useGameStatus();
   const [nextNumber, setNextNumber] = useState<number>(0);
   const [number, setNumber] = useState<number | null>(0);
@@ -404,11 +415,11 @@ function Home() {
   };
 
   const handleLoginWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
+    // await supabase.auth.signInWithOAuth({ provider: 'google' });
   };
 
   const handleLoginWithEmail = async () => {
-    await supabase.auth.signInWithOtp({ email });
+    // await supabase.auth.signInWithOtp({ email });
   };
 
   if (number === null) return;
@@ -416,7 +427,7 @@ function Home() {
   return (
     <>
       <Rank />
-      <button className='text-white' onClick={() => setPage('leaderboard')}>
+      <button className='text-white' onClick={() => redirect('/leaderboard')}>
         Leaderboard
       </button>
       <Chat />

@@ -1,0 +1,19 @@
+{
+  "name": "counttoamillion",
+  "private": true,
+  "version": "0",
+  "description": "WIP",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "prisma": "5.19.1"
+  },
+  "dependencies": {
+    "@prisma/client": "5.19.1"
+  }
+}

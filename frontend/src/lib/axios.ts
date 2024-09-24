@@ -1,18 +1,40 @@
-import axios from 'axios';
-import { useAccessToken } from '../context/Auth';
+import axiosLib from 'axios';
 import { config } from './config';
 
-const useAxios = () => {
-  const token = useAccessToken();
+const authAxios = axiosLib.create({
+  baseURL: config.backendApiHost,
+  withCredentials: true,
+});
 
-  const axiosInstace = axios.create({
-    baseURL: config.backendApiHost,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+authAxios.interceptors.response.use(
+  (response) => {
+    const locationHeader = response.headers['location'];
 
-  return axiosInstace;
-};
+    if (
+      typeof locationHeader === 'string' &&
+      window.location.pathname !== locationHeader
+    ) {
+      window.location.pathname = locationHeader;
+    }
 
-export { useAxios };
+    // Return the response for further processing
+    return response;
+  },
+  (error) => {
+    const locationHeader = error.response.headers['location'];
+
+    if (
+      typeof locationHeader === 'string' &&
+      window.location.pathname !== locationHeader &&
+      // Make sure the location header is a relative path
+      locationHeader.startsWith('/')
+    ) {
+      window.location.pathname = locationHeader;
+    }
+
+    // Handle the error response
+    return Promise.reject(error);
+  }
+);
+
+export { authAxios };
