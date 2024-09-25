@@ -9,6 +9,7 @@ import { Logout } from './Logout';
 import { useEffect } from 'react';
 import { updateColors } from './utils/updateColors';
 import { Toaster } from 'react-hot-toast';
+import { GameOver } from './GameOver';
 
 const router = createBrowserRouter([
   {
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
   {
     path: '/logout',
     element: <Logout />,
+  },
+  {
+    path: '/game-over',
+    element: <GameOver />,
   },
 ]);
 

@@ -26,7 +26,6 @@ create table message (
 
 create table game_status (
     id serial primary key,
-    started_at timestamp not null default '2024-09-21 07:30:00 PST',
     ended_at timestamp,
     winner_id uuid references app_user(id) on delete set null
 );

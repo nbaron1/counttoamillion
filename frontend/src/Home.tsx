@@ -148,21 +148,18 @@ const useWebsocket = (connectionURL: string, topic: string) => {
   return { isLoading, sendMessage };
 };
 
-const useGameStatus = () => {
+const useVerifyGameIsOngoing = () => {
   const [gameStatusData, setGameStatusData] = useState<GameStatusData | null>(
     null
   );
 
-  const [gameStatus, setGameStatus] = useState<
-    null | 'waiting' | 'ongoing' | 'final'
-  >(null);
+  const [isGameOngoing, setIsGameOngoing] = useState<null | boolean>(null);
 
   const updatedGameStatus = (gameStatusData: GameStatusData) => {
     const startedAtTime = new Date(gameStatusData.started_at).getTime();
     const now = new Date().getTime();
 
     if (now < startedAtTime) {
-      setGameStatus('waiting');
       return;
     }
 
@@ -170,12 +167,13 @@ const useGameStatus = () => {
       const endedAtTime = new Date(gameStatusData.ended_at).getTime();
 
       if (now > endedAtTime) {
-        setGameStatus('final');
+        setIsGameOngoing(false);
+        window.location.pathname = '/game-over';
         return;
       }
     }
 
-    setGameStatus('ongoing');
+    setIsGameOngoing(true);
   };
 
   useEffect(() => {
@@ -216,7 +214,7 @@ const useGameStatus = () => {
     getGameStatus();
   }, [getGameStatus]);
 
-  return gameStatus;
+  return isGameOngoing;
 };
 
 function Rank() {
@@ -355,14 +353,14 @@ function CloseIcon() {
   );
 }
 
-const USERS_PER_PAGE = 50;
+const USERS_PER_PAGE = 25;
 
 type User = {
   created_at: string;
   current_attempt_id: number;
   email: string | null;
   high_score: number;
-  id: number;
+  id: string;
   position: string;
   rank: string;
   score: number;
@@ -373,38 +371,24 @@ const LeadboardDialogContent = forwardRef<
   HTMLDivElement,
   { users: User[] | null; numberOfPages: number | null; page: number | null }
 >(({ numberOfPages, page, users }, ref) => {
+  const { user } = useUser();
+
   if (!users || !numberOfPages || !page) return <Spinner />;
 
   return (
     <>
       <div className='flex flex-col gap-2' ref={ref}>
-        {users.map(({ score, rank, username }) => (
+        {users.map(({ score, rank, username, id: currentUserId }) => (
           <div className='flex justify-between items-center'>
             <p>
-              {rank}. {username}
+              {rank}.{' '}
+              <span className={user.id === currentUserId ? 'underline' : ''}>
+                {username}
+              </span>
             </p>
             <p>{score}</p>
           </div>
         ))}
-      </div>
-
-      <div className='flex items-center px-4 justify-center'>
-        {Array.from({ length: numberOfPages + 4 }).map((_, index) => {
-          // only start from 1
-          // don't go less than one
-
-          return (
-            <div
-              className={twMerge([
-                'w-4 h-4 bg-secondary flex items-center justify-center',
-                index + 1 === page && 'underline',
-              ])}
-              key={index}
-            >
-              {index + 1}
-            </div>
-          );
-        })}
       </div>
     </>
   );
@@ -440,6 +424,17 @@ function Leaderboard() {
     }
   }, []);
 
+  const getUserPosition = useCallback(async () => {
+    try {
+      const response = await authAxios.get('/users/me/rank');
+      return response.data.data.position;
+    } catch (error) {
+      console.error(error);
+
+      return await getUserRank();
+    }
+  }, [getUserRank]);
+
   const getUsers = useCallback(async (page: number) => {
     try {
       const response = await authAxios.get(
@@ -451,6 +446,14 @@ function Leaderboard() {
       return await getUsers(page);
     }
   }, []);
+
+  useEffect(() => {
+    if (!page) return;
+
+    getUsers(page).then((data) => {
+      setUsers(data);
+    });
+  }, [getUsers, page]);
 
   useEffect(() => {
     try {
@@ -474,31 +477,54 @@ function Leaderboard() {
     }
   }, [isOpen, getUserCount, getUserRank, getUsers]);
 
-  const handleGoToYourRanking = () => {
-    console.log('go to your ranking');
+  const handleGoToYourRanking = async () => {
+    const position = await getUserPosition();
+
+    const page = Math.ceil(position / USERS_PER_PAGE);
+    setPage(page);
   };
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger className='text-left'>Leaderboard</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Content className='md:w-[500px] flex flex-col border gap-4 h-fit md:max-w-[800px] px-6 py-4 md:left-1/2 md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-3/4 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
-          <div className='flex justify-between items-center'>
-            <div>
-              <Dialog.Title className='text-lg'>Leaderboard</Dialog.Title>
-              <button className='underline' onClick={handleGoToYourRanking}>
-                Go to your ranking
-              </button>
+        <Dialog.Content className='md:w-[500px] flex flex-col border gap-4 justify-between h-96 md:max-w-[800px] px-6 py-6 md:left-1/2 md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-3/4 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
+          <div className='flex flex-col gap-4'>
+            <div className='flex justify-between items-center'>
+              <div>
+                <Dialog.Title className='text-lg'>Leaderboard</Dialog.Title>
+                <button className='underline' onClick={handleGoToYourRanking}>
+                  Skip to your ranking
+                </button>
+              </div>
+              <Dialog.Close>
+                <CloseIcon />
+              </Dialog.Close>
             </div>
-            <Dialog.Close>
-              <CloseIcon />
-            </Dialog.Close>
+            <LeadboardDialogContent
+              numberOfPages={numberOfPages}
+              page={page}
+              users={users}
+            />
           </div>
-          <LeadboardDialogContent
-            numberOfPages={numberOfPages}
-            page={page}
-            users={users}
-          />
+          {numberOfPages && (
+            <div className='flex items-center px-4 justify-center'>
+              {Array.from({ length: numberOfPages + 4 }).map((_, index) => {
+                return (
+                  <button
+                    onClick={() => setPage(index + 1)}
+                    className={twMerge([
+                      'w-4 h-4 bg-secondary flex items-center justify-center',
+                      index + 1 === page && 'underline',
+                    ])}
+                    key={index}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -510,7 +536,8 @@ function Home() {
     `${config.backendWebsocketHost}/score`,
     'score'
   );
-  const gameStatus = useGameStatus();
+
+  const isGameOngoing = useVerifyGameIsOngoing();
   const [currentNumberInput, setCurrentNumberInput] = useState<string>('');
   const [number, setNumber] = useState<number | null>(0);
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
@@ -540,7 +567,7 @@ function Home() {
     return unsubscribe;
   }, [subscribe, setIsVerificationRequired]);
 
-  if (!gameStatus) {
+  if (!isGameOngoing) {
     return (
       <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
         <Spinner />
