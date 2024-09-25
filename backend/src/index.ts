@@ -324,7 +324,9 @@ app.get('/users/count', protectRoute, async (_, res) => {
   try {
     const [count] = await sql`select count(*) from app_user`;
 
-    res.status(200).json({ data: { count: count.count }, success: true });
+    res
+      .status(200)
+      .json({ data: { count: Number(count.count) }, success: true });
   } catch (error) {
     console.error(error);
 

@@ -101,10 +101,6 @@ const useWebsocket = (connectionURL: string, topic: string) => {
 
       websocket.addEventListener('open', handleOpen);
       websocket.addEventListener('close', (event) => {
-        console.log('close!', event);
-
-        console.log(event.code);
-
         if (event.code === 1008) {
           window.location.href = '/auth/guest';
         }
@@ -344,8 +340,8 @@ function CloseIcon() {
       xmlns='http://www.w3.org/2000/svg'
     >
       <path
-        fill-rule='evenodd'
-        clip-rule='evenodd'
+        fillRule='evenodd'
+        clipRule='evenodd'
         d='M4.41009 4.41009C4.73553 4.08466 5.26317 4.08466 5.5886 4.41009L9.99935 8.82084L14.4101 4.41009C14.7355 4.08466 15.2632 4.08466 15.5886 4.41009C15.914 4.73553 15.914 5.26317 15.5886 5.5886L11.1779 9.99935L15.5886 14.4101C15.914 14.7355 15.914 15.2632 15.5886 15.5886C15.2632 15.914 14.7355 15.914 14.4101 15.5886L9.99935 11.1779L5.5886 15.5886C5.26317 15.914 4.73553 15.914 4.41009 15.5886C4.08466 15.2632 4.08466 14.7355 4.41009 14.4101L8.82084 9.99935L4.41009 5.5886C4.08466 5.26317 4.08466 4.73553 4.41009 4.41009Z'
         fill='white'
       />
@@ -377,23 +373,21 @@ const LeadboardDialogContent = forwardRef<
   if (!users || !numberOfPages || !page) return <Spinner />;
 
   return (
-    <>
-      <div className='flex flex-col gap-2 overflow-y-scroll' ref={ref}>
-        {users.map(({ score, rank, username, user_id }) => {
-          return (
-            <div className='flex justify-between items-center'>
-              <p>
-                {rank}.{' '}
-                <span className={user.id === user_id ? 'underline' : ''}>
-                  {username}
-                </span>
-              </p>
-              <p>{score}</p>
-            </div>
-          );
-        })}
-      </div>
-    </>
+    <div className='flex flex-col gap-2 overflow-y-scroll' ref={ref}>
+      {users.map(({ score, rank, username, user_id }) => {
+        return (
+          <div className='flex justify-between items-center'>
+            <p>
+              {rank}.{' '}
+              <span className={user.id === user_id ? 'underline' : ''}>
+                {username}
+              </span>
+            </p>
+            <p>{score}</p>
+          </div>
+        );
+      })}
+    </div>
   );
 });
 
@@ -408,6 +402,7 @@ function Leaderboard() {
     try {
       const response = await authAxios.get('/users/count');
       const count = response.data.data.count;
+      console.log({ count });
 
       return count;
     } catch (error) {
@@ -512,7 +507,7 @@ function Leaderboard() {
           </div>
           {numberOfPages && (
             <div className='flex items-center px-4 justify-center '>
-              {Array.from({ length: numberOfPages + 4 }).map((_, index) => {
+              {Array.from({ length: numberOfPages }).map((_, index) => {
                 return (
                   <button
                     onClick={() => setPage(index + 1)}
