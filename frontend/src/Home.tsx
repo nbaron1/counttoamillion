@@ -490,6 +490,7 @@ function Leaderboard() {
       if (!userElement) return;
 
       userElement.scrollIntoView({ behavior: 'smooth' });
+      setIsSkippingToYourRanking(false);
     }, 100);
   }, [isSkippingToYourRanking, user.id]);
 
