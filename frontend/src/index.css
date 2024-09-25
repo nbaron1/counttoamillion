@@ -52,3 +52,7 @@ body {
     opacity: 1;
   }
 }
+
+.slick-slide {
+  transform: translateY(-1.5px);
+}

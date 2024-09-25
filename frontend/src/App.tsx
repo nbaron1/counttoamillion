@@ -1,3 +1,5 @@
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 import { GoogleAuth } from './GoogleAuth';
 import { GuestAuth } from './GuestAuth';
 import { UserProvider } from './context/User';

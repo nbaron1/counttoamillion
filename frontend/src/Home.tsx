@@ -17,6 +17,7 @@ import * as Popover from '@radix-ui/react-popover';
 import * as Dialog from '@radix-ui/react-dialog';
 import { twMerge } from 'tailwind-merge';
 import toast from 'react-hot-toast';
+import Slider from 'react-slick';
 
 const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
 
@@ -400,8 +401,9 @@ function Leaderboard() {
   const { user } = useUser();
   const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
   const [users, setUsers] = useState<null | User[]>(null);
-  const [page, setPage] = useState<number | null>(null);
+  const [page, setPage] = useState<number>(1);
 
+  const sliderRef = useRef<Slider>(null);
   const [isSkippingToYourRanking, setIsSkippingToYourRanking] = useState(false);
 
   const getUserCount = useCallback(async () => {
@@ -452,12 +454,12 @@ function Leaderboard() {
   }, []);
 
   useEffect(() => {
-    if (!page) return;
+    if (!isOpen) return;
 
     getUsers(page).then((data) => {
       setUsers(data);
     });
-  }, [getUsers, page]);
+  }, [isOpen, getUsers, page]);
 
   useEffect(() => {
     try {
@@ -466,15 +468,6 @@ function Leaderboard() {
       getUserCount().then((count) => {
         const pages = Math.ceil(count / USERS_PER_PAGE);
         setNumberOfPages(pages);
-      });
-
-      getUserRank().then((rank) => {
-        const page = Math.ceil(rank / USERS_PER_PAGE);
-        setPage(page);
-
-        getUsers(page).then((data) => {
-          setUsers(data);
-        });
       });
     } catch (error) {
       console.log(error);
@@ -500,6 +493,13 @@ function Leaderboard() {
     const page = Math.ceil(position / USERS_PER_PAGE);
     setPage(page);
     setIsSkippingToYourRanking(true);
+    goToSlide(Math.floor(page / 5));
+  };
+
+  const goToSlide = (slideIndex: number) => {
+    if (!sliderRef.current) return;
+
+    sliderRef.current.slickGoTo(slideIndex);
   };
 
   return (
@@ -526,7 +526,11 @@ function Leaderboard() {
             />
           </div>
           {numberOfPages && (
-            <div className='flex items-center px-4 justify-center '>
+            <Slider
+              className='w-36  self-center flex items-center px-4 justify-center'
+              slidesPerRow={5}
+              ref={sliderRef}
+            >
               {Array.from({ length: numberOfPages }).map((_, index) => {
                 return (
                   <button
@@ -541,7 +545,7 @@ function Leaderboard() {
                   </button>
                 );
               })}
-            </div>
+            </Slider>
           )}
         </Dialog.Content>
       </Dialog.Portal>
@@ -648,8 +652,8 @@ function Home() {
           <div className='fixed top-1/2 -translate-y-3/4 right-3 left-3 text-white text-center'>
             <h2 className='text-[64px]'>{number.toLocaleString()}</h2>
             <p className='fade-in left-2 text-gray-white text-center'>
-              The first person to count to a million in a row will beat this
-              website
+              The first person to count to a million in a row will win and take
+              this website offline
             </p>
           </div>
         </div>
