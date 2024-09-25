@@ -2,12 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --primary: #6813d3;
-  --secondary: #8f35ff;
-  --tertiary: #b880ff;
+body {
+  --primary: black;
+  --secondary: black;
+  --tertiary: black;
+  background-color: var(--primary);
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 500ms;
 }
 
-body {
-  background-color: var(--primary);
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #fff;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

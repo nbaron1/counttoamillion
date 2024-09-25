@@ -2,11 +2,12 @@ import { GoogleAuth } from './GoogleAuth';
 import { GuestAuth } from './GuestAuth';
 import { UserProvider } from './context/User';
 import { Home } from './Home';
-import { Leaderboard } from './Leaderboard';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { GoogleAuthCallback } from './GoogleAuthCallback';
 import { FailedAuth } from './FailedAuth';
 import { Logout } from './Logout';
+import { useEffect } from 'react';
+import { updateColors } from './utils/updateColors';
 
 const router = createBrowserRouter([
   {
@@ -14,14 +15,6 @@ const router = createBrowserRouter([
     element: (
       <UserProvider>
         <Home />
-      </UserProvider>
-    ),
-  },
-  {
-    path: '/leaderboard',
-    element: (
-      <UserProvider>
-        <Leaderboard />
       </UserProvider>
     ),
   },
@@ -48,5 +41,9 @@ const router = createBrowserRouter([
 ]);
 
 export function App() {
+  useEffect(() => {
+    updateColors();
+  }, []);
+
   return <RouterProvider router={router} />;
 }

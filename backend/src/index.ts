@@ -3,7 +3,6 @@ import expressWs from 'express-ws';
 import cors from 'cors';
 import { config } from './config';
 import { sql } from './sql';
-import { pubClient, subClient } from './redis';
 import cookieParser from 'cookie-parser';
 import { generateRandomUsername } from './utils/generateARandomUsername';
 
@@ -287,6 +286,53 @@ const protectRoute = async (
   await sql`update session set expires_at = now() + interval '7 days' where id = ${sessionToken}`;
 };
 
+app.get('/users', protectRoute, async (req, res) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 50;
+
+    const offset = (page - 1) * limit;
+
+    const users = await sql`
+  with ranked_users as (
+    select
+      *,
+      dense_rank() over (order by score desc) as rank,
+      row_number() OVER (order by score desc) as position
+    from app_user
+    inner join attempt on app_user.current_attempt_id = attempt.id
+    order by score
+  )
+  select *
+  from ranked_users
+  order by rank desc
+  limit ${limit}
+  offset ${offset}`;
+
+    res.status(200).json({
+      data: {
+        users,
+      },
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
+app.get('/users/count', protectRoute, async (_, res) => {
+  try {
+    const [count] = await sql`select count(*) from app_user`;
+
+    res.status(200).json({ data: { count: count.count }, success: true });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
 app.get('/game-status', protectRoute, async (req, res) => {
   try {
     const [gameStatus] = await sql`select * from game_status where id = 1`;
@@ -512,13 +558,15 @@ const getUserRank = async (
   const [userRank] = await sql`
   with ranked_users as (
     select 
-      id, 
+      app_user.id, 
       high_score,
-      dense_rank() over (order by high_score desc) as rank,
-      row_number() OVER (order BY high_score DESC) AS position
+      score,
+      dense_rank() over (order by score desc) as rank,
+      row_number() OVER (order BY score DESC) AS position
     from app_user
+    inner join attempt on app_user.current_attempt_id = attempt.id 
   )
-  select rank, position 
+  select rank, position
   from ranked_users
   where id = ${userId}`;
 
@@ -529,99 +577,6 @@ const getUserRank = async (
 
   return data;
 };
-
-app.ws('/chat', async (ws, request) => {
-  const sessionToken = request.cookies.session;
-
-  if (typeof sessionToken !== 'string') {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
-
-  const [session] =
-    await sql`select * from session inner join app_user on session.user_id = app_user.id where session.id = ${sessionToken}`;
-
-  if (!session) {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
-
-  const isExpired = new Date(session.expires_at).getTime() < Date.now();
-
-  if (isExpired) {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
-
-  const [user] =
-    await sql`select * from app_user where id = ${session.user_id}`;
-
-  if (!user) {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
-  // const { data: userResult } = await supabase.auth.getUser(token);
-
-  // if (!userResult.user) {
-  //   ws.close(1008, 'Unauthorized');
-  //   return;
-  // }
-
-  // const userId = userResult.user.id;
-  // const username = userResult.user.user_metadata.username;
-
-  const userId = user.id;
-  const username = '567';
-
-  // subscribe to chat messages
-  subClient.subscribe('chat', (message) => {
-    const messageData = JSON.parse(message);
-
-    if (
-      typeof messageData.user_id !== 'string' ||
-      typeof messageData.message !== 'string' ||
-      typeof messageData.id !== 'number' ||
-      typeof messageData.username !== 'string'
-    ) {
-      return;
-    }
-
-    if (messageData.user_id === userId) return;
-
-    ws.send(
-      JSON.stringify({
-        type: 'message',
-        message: messageData.message,
-        username: messageData.username,
-        created_at: messageData.created_at,
-        user_id: messageData.userId,
-        id: messageData.id,
-      })
-    );
-  });
-
-  ws.on('message', async (data) => {
-    const message = data.toString();
-
-    if (typeof message !== 'string' || typeof userId !== 'string') return;
-
-    const [newMessage] =
-      await sql`insert into message (message, user_id) values (${message}, ${userId}) RETURNING *`;
-
-    // todo: send to openai moderation to verify before sending to other clients
-
-    pubClient.publish(
-      'chat',
-      JSON.stringify({
-        message,
-        user_id: userId,
-        created_at: newMessage.created_at,
-        username,
-        id: newMessage.id,
-      })
-    );
-  });
-});
 
 app.listen(config.port, () => {
   console.log(`Server listening on port ${config.port}`);
