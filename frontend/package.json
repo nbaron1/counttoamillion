@@ -13,10 +13,12 @@
     "@marsidev/react-turnstile": "^1.0.2",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-popover": "^1.1.1",
+    "@splidejs/splide": "^4.1.4",
     "axios": "^1.7.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2"
+    "react-router-dom": "^6.26.2",
+    "@splidejs/react-splide": "^0.7.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

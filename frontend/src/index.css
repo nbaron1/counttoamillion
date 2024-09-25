@@ -7,8 +7,11 @@ body {
   --secondary: black;
   --tertiary: black;
   background-color: var(--primary);
+}
+
+* {
   transition-property: color, background-color, border-color,
-    text-decoration-color, fill, stroke;
+    text-decoration-color, fill, stroke, outline-color;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 500ms;
 }
@@ -30,5 +33,22 @@ body {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+.dialog-content {
+  animation: 0.15s fade-in ease-in-out;
+}
+
+.fade-in {
+  animation: 0.5s fade-in ease-in-out;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }

@@ -301,11 +301,10 @@ app.get('/users', protectRoute, async (req, res) => {
       row_number() OVER (order by score desc) as position
     from app_user
     inner join attempt on app_user.current_attempt_id = attempt.id
-    order by score
   )
   select *
   from ranked_users
-  order by rank desc
+  order by rank asc
   limit ${limit}
   offset ${offset}`;
 
@@ -358,6 +357,31 @@ app.get('/users/me', protectRoute, async (req, res) => {
       res.status(404).json({ error: 'User not found', success: false });
       return;
     }
+
+    res.status(200).json({ data: { user }, success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
+app.put('/users/me/username', protectRoute, async (req, res) => {
+  try {
+    const userId = res.locals.userId;
+
+    if (typeof userId !== 'string') {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (typeof req.body.username !== 'string') {
+      res.status(400).json({ error: 'Bad Request', success: false });
+      return;
+    }
+
+    const username = req.body.username;
+
+    const [user] =
+      await sql`update app_user set username = ${username} where id = ${userId} returning *`;
 
     res.status(200).json({ data: { user }, success: true });
   } catch (error) {

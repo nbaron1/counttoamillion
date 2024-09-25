@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import './dialog.css';
 import './hide-scrollbar.css';
 import { Turnstile } from '@marsidev/react-turnstile';
@@ -6,6 +12,10 @@ import { config } from './lib/config';
 import { authAxios } from './lib/axios';
 import axios from 'axios';
 import { useUser } from './context/User';
+import { updateColors } from './utils/updateColors';
+import * as Popover from '@radix-ui/react-popover';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Splide, SplideSlide } from '@splidejs/react-splide';
 
 const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
 
@@ -258,6 +268,191 @@ function ChevronUp() {
   );
 }
 
+function DesktopUsername() {
+  const user = useUser();
+
+  return (
+    <Popover.Root>
+      <Popover.Trigger>{user.username}</Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Trigger></Popover.Trigger>
+        <Popover.Content side='bottom' sideOffset={12}>
+          Popover!
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width='20'
+      height='20'
+      viewBox='0 0 20 20'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        fill-rule='evenodd'
+        clip-rule='evenodd'
+        d='M4.41009 4.41009C4.73553 4.08466 5.26317 4.08466 5.5886 4.41009L9.99935 8.82084L14.4101 4.41009C14.7355 4.08466 15.2632 4.08466 15.5886 4.41009C15.914 4.73553 15.914 5.26317 15.5886 5.5886L11.1779 9.99935L15.5886 14.4101C15.914 14.7355 15.914 15.2632 15.5886 15.5886C15.2632 15.914 14.7355 15.914 14.4101 15.5886L9.99935 11.1779L5.5886 15.5886C5.26317 15.914 4.73553 15.914 4.41009 15.5886C4.08466 15.2632 4.08466 14.7355 4.41009 14.4101L8.82084 9.99935L4.41009 5.5886C4.08466 5.26317 4.08466 4.73553 4.41009 4.41009Z'
+        fill='white'
+      />
+    </svg>
+  );
+}
+
+const USERS_PER_PAGE = 50;
+
+type User = {
+  created_at: string;
+  current_attempt_id: number;
+  email: string | null;
+  high_score: number;
+  id: number;
+  position: string;
+  rank: string;
+  score: number;
+  username: string;
+};
+
+function MobileUsername() {
+  const user = useUser();
+
+  const [currentUsername, setCurrentUsername] = useState(user.username);
+
+  const handleUpdateUsername = async () => {
+    await authAxios.put('/users/me/username', {
+      username: currentUsername,
+    });
+  };
+
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>{user.username}</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Content className='fixed top-1/2 left-1/2  '>
+          <Dialog.Title>Update username</Dialog.Title>
+          <input
+            placeholder="What's the username"
+            className='border border-tertiary rounded-2xl bg-primary text-white'
+            value={currentUsername}
+            onChange={(event) => setCurrentUsername(event.target.value)}
+          />
+          <button
+            className='bg-primary rounded-xl h-14'
+            onClick={handleUpdateUsername}
+          >
+            Update
+          </button>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+const LeadboardDialogContent = forwardRef<HTMLDivElement>((_, ref) => {
+  const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
+  const [users, setUsers] = useState<null | User[]>(null);
+
+  const getUserCount = useCallback(async () => {
+    try {
+      const response = await authAxios.get('/users/count');
+      const count = response.data.data.count;
+
+      return count;
+    } catch (error) {
+      console.error(error);
+      return await getUserCount();
+    }
+  }, []);
+
+  const getUserRank = useCallback(async () => {
+    try {
+      const response = await authAxios.get('/users/me/rank');
+      return response.data.data.rank;
+    } catch (error) {
+      console.error(error);
+
+      return await getUserRank();
+    }
+  }, []);
+
+  const getUsers = useCallback(async (page: number) => {
+    try {
+      const response = await authAxios.get(
+        `/users?page=${page}&limit=${USERS_PER_PAGE}`
+      );
+      console.log(response.data.data.users);
+
+      return response.data.data.users;
+    } catch {
+      return await getUsers(page);
+    }
+  }, []);
+
+  // todo: only run when opened
+  useEffect(() => {
+    try {
+      getUserCount().then((count) => {
+        const pages = Math.ceil(count / USERS_PER_PAGE);
+        setNumberOfPages(pages);
+      });
+
+      getUserRank().then((rank) => {
+        const page = Math.ceil(rank / USERS_PER_PAGE);
+        getUsers(page).then((data) => {
+          setUsers(data);
+        });
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }, [getUserCount, getUserRank, getUsers]);
+
+  if (!users) return <Spinner />;
+
+  return (
+    <div className='flex flex-col gap-2' ref={ref}>
+      {users.map(({ score, rank, username }) => (
+        <div className='px-5 flex justify-between items-center'>
+          <p>
+            {rank}. {username}
+          </p>
+          <p>{score}</p>
+        </div>
+      ))}
+      <div className='flex overflow-x-scroll mx-4'>
+        {Array({ length: numberOfPages }).map((_, index) => (
+          <p>{index + 1}</p>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+function Leaderboard() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog.Trigger className='text-left'>Leaderboard</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Content className='dialog-content top-3 left-3 right-3 bottom-3 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
+          <div className='flex justify-between items-center px-6 py-6'>
+            <Dialog.Title className='text-lg'>Leaderboard</Dialog.Title>
+            <Dialog.Close>
+              <CloseIcon />
+            </Dialog.Close>
+          </div>
+          <LeadboardDialogContent />
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function Home() {
   const { sendMessage } = useWebsocket(
     `${config.backendWebsocketHost}/score`,
@@ -314,6 +509,7 @@ function Home() {
     );
 
     setCurrentNumberInput('');
+    updateColors();
   };
 
   const handleSuccess = (token: string) => {
@@ -333,53 +529,53 @@ function Home() {
   return (
     <>
       <div className='top-20 right-4 fixed flex flex-col gap-4'></div>
-      <div className='h-screen flex flex-col justify-between px-5 py-4'>
+      <div className='h-screen flex flex-col overflow-x-clip justify-between px-5 py-4'>
         <div className='flex flex-col gap-2'>
           <div className='flex justify-between'>
-            <div className='flex flex-col text-white'>
-              <a href='/leaderboard' className='font-bold'>
-                Leaderboard
-              </a>
-              <p>Anonymous Turkey</p>
+            <div className='flex flex-col gap-[2px] text-white'>
+              <Leaderboard />
+              <div className='hidden md:block'>
+                <DesktopUsername />
+              </div>
+              <div className='md:hidden'>
+                <MobileUsername />
+              </div>
             </div>
-            <div className='flex flex-col text-right text-white'>
-              <p className='font-bold'>123</p>
+            <div className='flex flex-col gap-[2px] text-right text-white'>
+              {user.email ? (
+                <a href='/logout'>Logout</a>
+              ) : (
+                <a href='/auth/google'>Save progress</a>
+              )}
               <Rank />
             </div>
           </div>
-          <div className='flex justify-between items-center'>
-            <p>
-              {user.email ? (
-                <a className='text-white' href='/logout'>
-                  Logout
-                </a>
-              ) : (
-                <a className='text-white' href='/auth/google'>
-                  Save your progress
-                </a>
-              )}
+        </div>
+        <div className='flex flex-col'>
+          <h2 className='fixed top-1/2 -translate-y-3/4 right-3 left-3 text-white text-center'>
+            <h2 className='text-[64px]'>{number.toLocaleString()}</h2>
+            <p className='fade-in left-2 text-gray-white text-center'>
+              The first person to count to a million in a row will beat this
+              website
             </p>
-            <p className='text-white'>Buy me a coffee</p>
-          </div>
+          </h2>
         </div>
 
-        <h2 className='fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 text-white text-[64px] text-center'>
-          {number.toLocaleString()}
-        </h2>
-        <div className='flex flex-col gap-3'>
+        <div className='fixed bottom-3 left-3 right-3 md:left-1/2 md:bottom-6 md:-translate-x-1/2 md:w-[350px] md:right-auto'>
           {isVerificationRequired ? (
             <Turnstile
               siteKey={config.turnstileSiteKey}
               onSuccess={handleSuccess}
+              options={{ size: 'flexible' }}
             />
           ) : (
-            <div className='relative max-w-screen-md self-stretch'>
+            <div className='relative'>
               <input
                 type='text'
                 placeholder='Write next number'
                 value={currentNumberInput}
                 onChange={(event) => setCurrentNumberInput(event.target.value)}
-                className='placeholder:text-gray-200 rounded-2xl h-[60px] outline-none bg-secondary px-5 w-full border text-white border-tertiary'
+                className='fade-in placeholder:text-gray-200 rounded-2xl h-[60px] outline-none bg-secondary px-5 w-full border text-white border-tertiary'
                 onKeyDown={handleKeyDown}
               />
               <button
