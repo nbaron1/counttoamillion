@@ -117,7 +117,7 @@ export function Leaderboard() {
   const [page, setPage] = useState(1);
   const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
 
-  const user = useUser();
+  const { user } = useUser();
 
   const getUsersCount = async (): Promise<number> => {
     const response = await authAxios.get('/users/count');

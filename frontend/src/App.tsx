@@ -8,6 +8,7 @@ import { FailedAuth } from './FailedAuth';
 import { Logout } from './Logout';
 import { useEffect } from 'react';
 import { updateColors } from './utils/updateColors';
+import { Toaster } from 'react-hot-toast';
 
 const router = createBrowserRouter([
   {
@@ -45,5 +46,10 @@ export function App() {
     updateColors();
   }, []);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  );
 }

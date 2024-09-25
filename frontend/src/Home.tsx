@@ -15,7 +15,8 @@ import { useUser } from './context/User';
 import { updateColors } from './utils/updateColors';
 import * as Popover from '@radix-ui/react-popover';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Splide, SplideSlide } from '@splidejs/react-splide';
+import { twMerge } from 'tailwind-merge';
+import toast from 'react-hot-toast';
 
 const WEBSOCKET_HOST = import.meta.env.VITE_BACKEND_WEBSOCKET_HOST;
 
@@ -78,7 +79,7 @@ const useWebsocket = (connectionURL: string, topic: string) => {
   const [isLoading, setIsLoading] = useState(true);
   const retryTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
-  const user = useUser();
+  const { user } = useUser();
 
   const handleOpen = useCallback(() => {
     setIsLoading(false);
@@ -102,7 +103,11 @@ const useWebsocket = (connectionURL: string, topic: string) => {
       websocket.addEventListener('close', (event) => {
         console.log('close!', event);
 
-        // if because of unauthorized redirect to /auth
+        console.log(event.code);
+
+        if (event.code === 1008) {
+          window.location.href = '/auth/guest';
+        }
 
         if (websocketRef.current) {
           websocketRef.current.removeEventListener('open', handleOpen);
@@ -269,15 +274,62 @@ function ChevronUp() {
 }
 
 function DesktopUsername() {
-  const user = useUser();
+  const { user, revalidate } = useUser();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentUsername, setCurrentUsername] = useState(user.username);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setCurrentUsername(user.username);
+    }
+
+    setIsOpen(open);
+  };
+
+  const handleSaveUsername = async () => {
+    try {
+      toast.loading('Saving username...', { id: 'save-username' });
+
+      await authAxios.put('/users/me/username', {
+        username: currentUsername,
+      });
+
+      toast.success('Username saved', { id: 'save-username' });
+
+      setIsOpen(false);
+      revalidate();
+    } catch {
+      toast.error('Failed to update username', { id: 'save-username' });
+    }
+  };
+
+  useEffect(() => {
+    setCurrentUsername(user.username);
+  }, [user]);
 
   return (
-    <Popover.Root>
+    <Popover.Root onOpenChange={handleOpenChange} open={isOpen}>
       <Popover.Trigger>{user.username}</Popover.Trigger>
       <Popover.Portal>
-        <Popover.Trigger></Popover.Trigger>
-        <Popover.Content side='bottom' sideOffset={12}>
-          Popover!
+        <Popover.Content
+          side='bottom'
+          align='start'
+          sideOffset={4}
+          className='fade-in-contents max-w-[90vw] border border-tertiary w-[320px] rounded-2xl gap-1 bg-secondary flex flex-col text-whites p-3'
+        >
+          <input
+            value={currentUsername}
+            onChange={(event) => setCurrentUsername(event.target.value)}
+            placeholder="What's the username"
+            className='py-2 px-4 outline-none bg-transparent rounded-xl border border-tertiary text-white'
+          />
+          <button
+            onClick={handleSaveUsername}
+            className='bg-primary text-white max-w-80 h-[44px] rounded-xl border-secondary '
+          >
+            Save username
+          </button>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -317,44 +369,53 @@ type User = {
   username: string;
 };
 
-function MobileUsername() {
-  const user = useUser();
-
-  const [currentUsername, setCurrentUsername] = useState(user.username);
-
-  const handleUpdateUsername = async () => {
-    await authAxios.put('/users/me/username', {
-      username: currentUsername,
-    });
-  };
+const LeadboardDialogContent = forwardRef<
+  HTMLDivElement,
+  { users: User[] | null; numberOfPages: number | null; page: number | null }
+>(({ numberOfPages, page, users }, ref) => {
+  if (!users || !numberOfPages || !page) return <Spinner />;
 
   return (
-    <Dialog.Root>
-      <Dialog.Trigger>{user.username}</Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Content className='fixed top-1/2 left-1/2  '>
-          <Dialog.Title>Update username</Dialog.Title>
-          <input
-            placeholder="What's the username"
-            className='border border-tertiary rounded-2xl bg-primary text-white'
-            value={currentUsername}
-            onChange={(event) => setCurrentUsername(event.target.value)}
-          />
-          <button
-            className='bg-primary rounded-xl h-14'
-            onClick={handleUpdateUsername}
-          >
-            Update
-          </button>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
+    <>
+      <div className='flex flex-col gap-2' ref={ref}>
+        {users.map(({ score, rank, username }) => (
+          <div className='flex justify-between items-center'>
+            <p>
+              {rank}. {username}
+            </p>
+            <p>{score}</p>
+          </div>
+        ))}
+      </div>
 
-const LeadboardDialogContent = forwardRef<HTMLDivElement>((_, ref) => {
+      <div className='flex items-center px-4 justify-center'>
+        {Array.from({ length: numberOfPages + 4 }).map((_, index) => {
+          // only start from 1
+          // don't go less than one
+
+          return (
+            <div
+              className={twMerge([
+                'w-4 h-4 bg-secondary flex items-center justify-center',
+                index + 1 === page && 'underline',
+              ])}
+              key={index}
+            >
+              {index + 1}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+});
+
+function Leaderboard() {
+  const [isOpen, setIsOpen] = useState(false);
+
   const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
   const [users, setUsers] = useState<null | User[]>(null);
+  const [page, setPage] = useState<number | null>(null);
 
   const getUserCount = useCallback(async () => {
     try {
@@ -384,7 +445,6 @@ const LeadboardDialogContent = forwardRef<HTMLDivElement>((_, ref) => {
       const response = await authAxios.get(
         `/users?page=${page}&limit=${USERS_PER_PAGE}`
       );
-      console.log(response.data.data.users);
 
       return response.data.data.users;
     } catch {
@@ -392,9 +452,10 @@ const LeadboardDialogContent = forwardRef<HTMLDivElement>((_, ref) => {
     }
   }, []);
 
-  // todo: only run when opened
   useEffect(() => {
     try {
+      if (!isOpen) return;
+
       getUserCount().then((count) => {
         const pages = Math.ceil(count / USERS_PER_PAGE);
         setNumberOfPages(pages);
@@ -402,6 +463,8 @@ const LeadboardDialogContent = forwardRef<HTMLDivElement>((_, ref) => {
 
       getUserRank().then((rank) => {
         const page = Math.ceil(rank / USERS_PER_PAGE);
+        setPage(page);
+
         getUsers(page).then((data) => {
           setUsers(data);
         });
@@ -409,44 +472,33 @@ const LeadboardDialogContent = forwardRef<HTMLDivElement>((_, ref) => {
     } catch (error) {
       console.log(error);
     }
-  }, [getUserCount, getUserRank, getUsers]);
+  }, [isOpen, getUserCount, getUserRank, getUsers]);
 
-  if (!users) return <Spinner />;
-
-  return (
-    <div className='flex flex-col gap-2' ref={ref}>
-      {users.map(({ score, rank, username }) => (
-        <div className='px-5 flex justify-between items-center'>
-          <p>
-            {rank}. {username}
-          </p>
-          <p>{score}</p>
-        </div>
-      ))}
-      <div className='flex overflow-x-scroll mx-4'>
-        {Array({ length: numberOfPages }).map((_, index) => (
-          <p>{index + 1}</p>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-function Leaderboard() {
-  const [isOpen, setIsOpen] = useState(false);
+  const handleGoToYourRanking = () => {
+    console.log('go to your ranking');
+  };
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger className='text-left'>Leaderboard</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Content className='dialog-content top-3 left-3 right-3 bottom-3 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
-          <div className='flex justify-between items-center px-6 py-6'>
-            <Dialog.Title className='text-lg'>Leaderboard</Dialog.Title>
+        <Dialog.Content className='md:w-[500px] flex flex-col border gap-4 h-fit md:max-w-[800px] px-6 py-4 md:left-1/2 md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-3/4 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
+          <div className='flex justify-between items-center'>
+            <div>
+              <Dialog.Title className='text-lg'>Leaderboard</Dialog.Title>
+              <button className='underline' onClick={handleGoToYourRanking}>
+                Go to your ranking
+              </button>
+            </div>
             <Dialog.Close>
               <CloseIcon />
             </Dialog.Close>
           </div>
-          <LeadboardDialogContent />
+          <LeadboardDialogContent
+            numberOfPages={numberOfPages}
+            page={page}
+            users={users}
+          />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -463,7 +515,7 @@ function Home() {
   const [number, setNumber] = useState<number | null>(0);
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
-  const user = useUser();
+  const { user } = useUser();
 
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
@@ -534,11 +586,8 @@ function Home() {
           <div className='flex justify-between'>
             <div className='flex flex-col gap-[2px] text-white'>
               <Leaderboard />
-              <div className='hidden md:block'>
+              <div className=''>
                 <DesktopUsername />
-              </div>
-              <div className='md:hidden'>
-                <MobileUsername />
               </div>
             </div>
             <div className='flex flex-col gap-[2px] text-right text-white'>
@@ -552,13 +601,13 @@ function Home() {
           </div>
         </div>
         <div className='flex flex-col'>
-          <h2 className='fixed top-1/2 -translate-y-3/4 right-3 left-3 text-white text-center'>
+          <div className='fixed top-1/2 -translate-y-3/4 right-3 left-3 text-white text-center'>
             <h2 className='text-[64px]'>{number.toLocaleString()}</h2>
             <p className='fade-in left-2 text-gray-white text-center'>
               The first person to count to a million in a row will beat this
               website
             </p>
-          </h2>
+          </div>
         </div>
 
         <div className='fixed bottom-3 left-3 right-3 md:left-1/2 md:bottom-6 md:-translate-x-1/2 md:w-[350px] md:right-auto'>

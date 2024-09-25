@@ -27,7 +27,8 @@ create table message (
 create table game_status (
     id serial primary key,
     started_at timestamp not null default '2024-09-21 07:30:00 PST',
-    ended_at timestamp
+    ended_at timestamp,
+    winner_id uuid references app_user(id) on delete set null
 );
 
 insert into game_status default values; 
@@ -37,19 +38,4 @@ create table session (
 	created_at timestamp not null default now(),
 	expires_at timestamp not null default now() + interval '7 days',
 	user_id uuid references app_user(id) on delete cascade
-);
-
-create table reset (
-  id serial primary key,
-  price_paid numeric(15, 2) not null, -- 15 digits, 2 decimal places
-  created_at timestamp not null default CURRENT_TIMESTAMP,
-  created_by_user_id uuid references app_user(id),
-  user_id uuid references app_user(id)
-);
-
-create table global_reset (
-  id serial primary key,
-  price_paid numeric(15, 2) not null, -- 15 digits, 2 decimal places
-  created_at timestamp not null default CURRENT_TIMESTAMP,
-  created_by_user_id uuid references app_user(id)
 );

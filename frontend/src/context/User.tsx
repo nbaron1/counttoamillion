@@ -10,16 +10,19 @@ type User = {
   email: string | null;
 };
 
-const UserContext = createContext<null | User>(null);
+const UserContext = createContext<{
+  user: null | User;
+  revalidate: () => void;
+}>({ user: null, revalidate: () => null });
 
 export const useUser = () => {
-  const user = React.useContext(UserContext);
+  const { user, revalidate } = React.useContext(UserContext);
 
   if (!user) {
     throw new Error('useUser must be used within a UserProvider');
   }
 
-  return user;
+  return { user, revalidate };
 };
 
 const useLocation = () => {
@@ -67,5 +70,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+  const revalidate = async () => {
+    const user = await getUser();
+    setUser(user);
+  };
+
+  return (
+    <UserContext.Provider value={{ user, revalidate }}>
+      {children}
+    </UserContext.Provider>
+  );
 }
