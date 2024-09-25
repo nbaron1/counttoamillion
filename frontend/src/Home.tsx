@@ -376,7 +376,11 @@ const LeadboardDialogContent = forwardRef<
     <div className='flex flex-col gap-2 overflow-y-scroll' ref={ref}>
       {users.map(({ score, rank, username, user_id }) => {
         return (
-          <div className='flex justify-between items-center'>
+          <div
+            id={`user-${user_id}`}
+            key={user_id}
+            className='flex justify-between items-center'
+          >
             <p>
               {rank}.{' '}
               <span className={user.id === user_id ? 'underline' : ''}>
@@ -393,10 +397,12 @@ const LeadboardDialogContent = forwardRef<
 
 function Leaderboard() {
   const [isOpen, setIsOpen] = useState(false);
-
+  const { user } = useUser();
   const [numberOfPages, setNumberOfPages] = useState<null | number>(null);
   const [users, setUsers] = useState<null | User[]>(null);
   const [page, setPage] = useState<number | null>(null);
+
+  const [isSkippingToYourRanking, setIsSkippingToYourRanking] = useState(false);
 
   const getUserCount = useCallback(async () => {
     try {
@@ -475,18 +481,31 @@ function Leaderboard() {
     }
   }, [isOpen, getUserCount, getUserRank, getUsers]);
 
+  useEffect(() => {
+    if (!isSkippingToYourRanking) return;
+
+    // todo: find a better way to scroll to the user instead of using setTimeout
+    setTimeout(() => {
+      const userElement = document.getElementById(`user-${user.id}`);
+      if (!userElement) return;
+
+      userElement.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, [isSkippingToYourRanking, user.id]);
+
   const handleGoToYourRanking = async () => {
     const position = await getUserPosition();
 
     const page = Math.ceil(position / USERS_PER_PAGE);
     setPage(page);
+    setIsSkippingToYourRanking(true);
   };
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger className='text-left '>Leaderboard</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Content className='shadow-sm md:w-[500px] flex flex-col border gap-4 justify-between h-96 md:max-w-[800px] px-6 py-6 md:left-1/2 md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-3/4 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
+        <Dialog.Content className='shadow-sm md:w-[500px] flex flex-col border gap-4 justify-between md:max-w-[800px] px-6 py-6 md:left-1/2 h-[75vh] md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-1/2 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
           <div className='flex flex-col gap-4 min-h-0'>
             <div className='flex justify-between items-center'>
               <div>
@@ -576,7 +595,6 @@ function Home() {
   const handleSubmit = () => {
     // todo: handle non-numeric input with a toast error
     const numberValue = Number(currentNumberInput);
-    console.log('submit', numberValue);
 
     sendMessage(
       JSON.stringify({
