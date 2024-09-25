@@ -365,6 +365,7 @@ type User = {
   rank: string;
   score: number;
   username: string;
+  user_id: string;
 };
 
 const LeadboardDialogContent = forwardRef<
@@ -377,18 +378,20 @@ const LeadboardDialogContent = forwardRef<
 
   return (
     <>
-      <div className='flex flex-col gap-2' ref={ref}>
-        {users.map(({ score, rank, username, id: currentUserId }) => (
-          <div className='flex justify-between items-center'>
-            <p>
-              {rank}.{' '}
-              <span className={user.id === currentUserId ? 'underline' : ''}>
-                {username}
-              </span>
-            </p>
-            <p>{score}</p>
-          </div>
-        ))}
+      <div className='flex flex-col gap-2 overflow-y-scroll' ref={ref}>
+        {users.map(({ score, rank, username, user_id }) => {
+          return (
+            <div className='flex justify-between items-center'>
+              <p>
+                {rank}.{' '}
+                <span className={user.id === user_id ? 'underline' : ''}>
+                  {username}
+                </span>
+              </p>
+              <p>{score}</p>
+            </div>
+          );
+        })}
       </div>
     </>
   );
@@ -486,10 +489,10 @@ function Leaderboard() {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Dialog.Trigger className='text-left'>Leaderboard</Dialog.Trigger>
+      <Dialog.Trigger className='text-left '>Leaderboard</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Content className='md:w-[500px] flex flex-col border gap-4 justify-between h-96 md:max-w-[800px] px-6 py-6 md:left-1/2 md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-3/4 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
-          <div className='flex flex-col gap-4'>
+        <Dialog.Content className='shadow-sm md:w-[500px] flex flex-col border gap-4 justify-between h-96 md:max-w-[800px] px-6 py-6 md:left-1/2 md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-3/4 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
+          <div className='flex flex-col gap-4 min-h-0'>
             <div className='flex justify-between items-center'>
               <div>
                 <Dialog.Title className='text-lg'>Leaderboard</Dialog.Title>
@@ -508,13 +511,13 @@ function Leaderboard() {
             />
           </div>
           {numberOfPages && (
-            <div className='flex items-center px-4 justify-center'>
+            <div className='flex items-center px-4 justify-center '>
               {Array.from({ length: numberOfPages + 4 }).map((_, index) => {
                 return (
                   <button
                     onClick={() => setPage(index + 1)}
                     className={twMerge([
-                      'w-4 h-4 bg-secondary flex items-center justify-center',
+                      'w-6 h-6 bg-secondary flex items-center justify-center',
                       index + 1 === page && 'underline',
                     ])}
                     key={index}

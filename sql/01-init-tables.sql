@@ -17,13 +17,6 @@ create table attempt (
 
 alter table app_user add column current_attempt_id int references attempt(id) on delete set null;
 
-create table message (
-	id serial primary key,
-	created_at timestamp not null default CURRENT_TIMESTAMP,
-	user_id uuid not null references app_user(id) on delete cascade,
-	message text not null
-);
-
 create table game_status (
     id serial primary key,
     ended_at timestamp,

@@ -1,7 +1,7 @@
 export function GameOver() {
   return (
     <div>
-      <p>Game over</p>
+      <p>This website has been beaten</p>
     </div>
   );
 }
