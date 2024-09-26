@@ -390,6 +390,65 @@ const LeadboardDialogContent = forwardRef<
   );
 });
 
+function PageNumbers({
+  numberOfPages,
+  page,
+  setPage,
+  sliderRef,
+}: {
+  numberOfPages: number | null;
+  setPage: (value: number) => void;
+  page: number;
+  sliderRef: React.RefObject<Slider>;
+}) {
+  if (!numberOfPages) return null;
+
+  if (numberOfPages && numberOfPages > 5) {
+    return (
+      <Slider
+        className='w-36  self-center flex items-center px-4 justify-center'
+        slidesPerRow={5}
+        ref={sliderRef}
+      >
+        {Array.from({ length: numberOfPages }).map((_, index) => {
+          return (
+            <button
+              onClick={() => setPage(index + 1)}
+              className={twMerge([
+                'w-6 h-6 bg-secondary flex items-center justify-center',
+                index + 1 === page && 'underline',
+              ])}
+              key={index}
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+      </Slider>
+    );
+  }
+
+  return (
+    <div className='w-36  self-center flex items-center px-4 justify-center'>
+      {numberOfPages &&
+        Array.from({ length: numberOfPages }).map((_, index) => {
+          return (
+            <button
+              onClick={() => setPage(index + 1)}
+              className={twMerge([
+                'w-6 h-6 bg-secondary flex items-center justify-center',
+                index + 1 === page && 'underline',
+              ])}
+              key={index}
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+    </div>
+  );
+}
+
 function Leaderboard() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
@@ -519,28 +578,12 @@ function Leaderboard() {
               users={users}
             />
           </div>
-          {numberOfPages && (
-            <Slider
-              className='w-36  self-center flex items-center px-4 justify-center'
-              slidesPerRow={5}
-              ref={sliderRef}
-            >
-              {Array.from({ length: numberOfPages }).map((_, index) => {
-                return (
-                  <button
-                    onClick={() => setPage(index + 1)}
-                    className={twMerge([
-                      'w-6 h-6 bg-secondary flex items-center justify-center',
-                      index + 1 === page && 'underline',
-                    ])}
-                    key={index}
-                  >
-                    {index + 1}
-                  </button>
-                );
-              })}
-            </Slider>
-          )}
+          <PageNumbers
+            sliderRef={sliderRef}
+            numberOfPages={numberOfPages}
+            page={page}
+            setPage={setPage}
+          />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
