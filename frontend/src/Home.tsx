@@ -128,7 +128,22 @@ const useWebsocket = (connectionURL: string, topic: string) => {
   );
 
   const connectWebSocket = useCallback(async () => {
-    console.log('Connecting to websocket');
+    if (websocketRef.current) {
+      const isClosedOrClosing =
+        websocketRef.current.readyState === WebSocket.CLOSED ||
+        websocketRef.current.readyState === WebSocket.CLOSING;
+
+      // close the previous websocket connection only if it has failed
+      if (!isClosedOrClosing) {
+        return;
+      }
+
+      websocketRef.current.removeEventListener('open', handleOpen);
+      websocketRef.current.removeEventListener('close', handleClose);
+      websocketRef.current.removeEventListener('message', handleMessage);
+      websocketRef.current.close();
+    }
+
     const websocket = new WebSocket(connectionURL);
     websocketRef.current = websocket;
 
@@ -140,14 +155,7 @@ const useWebsocket = (connectionURL: string, topic: string) => {
   useEffect(() => {
     connectWebSocket();
 
-    return () => {
-      if (websocketRef.current) {
-        websocketRef.current.removeEventListener('open', handleOpen);
-        websocketRef.current.removeEventListener('close', handleClose);
-        websocketRef.current.removeEventListener('message', handleMessage);
-        websocketRef.current.close();
-      }
-    };
+    return () => {};
   }, [connectWebSocket, handleClose, handleMessage, handleOpen]);
 
   return { isLoading, sendMessage };
