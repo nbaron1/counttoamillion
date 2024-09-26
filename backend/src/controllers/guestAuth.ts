@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express';
 import { Users } from '../models/Users';
 import { Session } from '../models/Session';
+import { TEN_YEARS } from '../constants';
 
 export const guestAuth: RequestHandler = async (req, res) => {
   try {
@@ -18,7 +19,9 @@ export const guestAuth: RequestHandler = async (req, res) => {
 
     const { session } = await new Users().create(null);
 
-    res.cookie('session', session.id);
+    res.cookie('session', session.id, {
+      expires: new Date(Date.now() + TEN_YEARS),
+    });
     res.header('location', '/');
     res.status(200).send({ success: true });
   } catch (error) {

@@ -4,6 +4,7 @@ import { Session } from '../models/Session';
 import { Sessions } from '../models/Sessions';
 import { Users } from '../models/Users';
 import { User } from '../models/User';
+import { TEN_YEARS } from '../constants';
 
 export const googleAuth: RequestHandler = async (req, res) => {
   try {
@@ -63,7 +64,9 @@ export const googleAuth: RequestHandler = async (req, res) => {
     if (existingUser) {
       const session = await new Sessions().create(existingUser.id);
 
-      res.cookie('session', session.id);
+      res.cookie('session', session.id, {
+        expires: new Date(Date.now() + TEN_YEARS),
+      });
       res.header('location', '/');
       res.status(200).json({ success: true });
       return;
@@ -91,7 +94,9 @@ export const googleAuth: RequestHandler = async (req, res) => {
 
     const { session } = await new Users().create(email);
 
-    res.cookie('session', session.id);
+    res.cookie('session', session.id, {
+      expires: new Date(Date.now() + TEN_YEARS),
+    });
     res.header('location', '/');
     res.status(200).json({ success: true });
   } catch (error) {
