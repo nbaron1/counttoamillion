@@ -829,7 +829,7 @@ function Home() {
   return (
     <>
       <div className='top-20 right-4 fixed flex flex-col gap-4'></div>
-      <div className='h-screen flex flex-col overflow-x-clip justify-between px-5 py-4'>
+      <div className='h-screen flex flex-col overflow-x-clip justify-between px-5 py-4 w-screen'>
         <div className='flex flex-col gap-2'>
           <div className='flex justify-between'>
             <div className='flex flex-col gap-[2px] text-white'>
