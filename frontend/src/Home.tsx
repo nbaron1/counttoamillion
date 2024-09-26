@@ -309,13 +309,18 @@ function MobileUsername() {
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger>{user.username}</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Content className='flex flex-col px-5 py-6 fade-in-contents gap-2 rounded-2xl bg-secondary border border-tertiary fixed top-1/2 left-3 right-3 -translate-y-1/2'>
-          <Dialog.Title className='flex justify-between items-center'>
-            <h2 className='text-lg text-white'>Update username</h2>
+        <Dialog.Content
+          aria-describedby={undefined}
+          className='flex flex-col px-5 py-6 fade-in-contents gap-2 rounded-2xl bg-secondary border border-tertiary fixed top-1/2 left-3 right-3 -translate-y-1/2'
+        >
+          <div className='flex justify-between items-center'>
+            <Dialog.Title className='text-lg text-white'>
+              Update username
+            </Dialog.Title>
             <Dialog.Close>
               <CloseIcon />
             </Dialog.Close>
-          </Dialog.Title>
+          </div>
           <input
             value={currentUsername}
             onChange={(event) => setCurrentUsername(event.target.value)}
@@ -564,10 +569,10 @@ function SaveProgress() {
               <CloseIcon />
             </Dialog.Close>
           </div>
-          <p className='text-white'>
+          <Dialog.Description className='text-white'>
             Don’t lose your progress if you change computers or clear your
             cookies
-          </p>
+          </Dialog.Description>
           <a
             href='/auth/google'
             className='w-full text-white py-3 flex items-center justify-center gap-6 bg-primary border border-tertiary rounded-xl'

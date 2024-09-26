@@ -385,6 +385,37 @@ app.get('/users/:userId', protectRoute, async (req, res) => {
   }
 });
 
+const moderateText = async (text: string): Promise<string | null> => {
+  try {
+    const response = await fetch('https://api.openai.com/v1/moderations', {
+      headers: {
+        Authorization: `Bearer ${config.openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        input: text,
+      }),
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const isFlagged = data.results[0].flagged;
+
+    if (isFlagged) {
+      return null;
+    }
+
+    return text;
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
 app.put('/users/me/username', protectRoute, async (req, res) => {
   try {
     const userId = res.locals.userId;
@@ -400,6 +431,13 @@ app.put('/users/me/username', protectRoute, async (req, res) => {
     }
 
     const username = req.body.username;
+
+    const moderatedUsername = await moderateText(username);
+
+    if (moderatedUsername === null) {
+      res.status(400).json({ error: 'Bad Request', success: false });
+      return;
+    }
 
     const [user] =
       await sql`update app_user set username = ${username} where id = ${userId} returning *`;

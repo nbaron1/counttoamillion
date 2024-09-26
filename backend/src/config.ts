@@ -21,4 +21,5 @@ export const config = {
   googleRedirectURI: throwIfMissing('GOOGLE_REDIRECT_URI'),
   googleClientId: throwIfMissing('GOOGLE_CLIENT_ID'),
   googleClientSecret: throwIfMissing('GOOGLE_CLIENT_SECRET'),
+  openaiApiKey: throwIfMissing('OPENAI_API_KEY'),
 } as const;
