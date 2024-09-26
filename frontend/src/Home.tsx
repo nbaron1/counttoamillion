@@ -449,7 +449,10 @@ const LeadboardDialogContent = forwardRef<
   if (!users || !numberOfPages || !page) return <Spinner />;
 
   return (
-    <div className='flex flex-col gap-2 overflow-y-scroll' ref={ref}>
+    <div
+      className='flex flex-col gap-2 overflow-y-scroll hide-scrollbar'
+      ref={ref}
+    >
       {users.map(({ score, rank, username, id }) => {
         return (
           <div
