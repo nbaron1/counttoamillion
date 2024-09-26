@@ -9,8 +9,8 @@ const COLOR_PALETTES: {
     tertiary: '#b880ff',
   },
   {
-    primary: '#0019F9',
-    secondary: '#2B34FF',
+    primary: '#0F28A8',
+    secondary: '#1F28FF',
     tertiary: '#3F50EE',
   },
   {
@@ -31,15 +31,25 @@ const COLOR_PALETTES: {
 ];
 
 export const updateColors = () => {
-  const randomIndex = Math.floor(Math.random() * COLOR_PALETTES.length);
-  const randomColorPalette = COLOR_PALETTES[randomIndex];
+  const body = document.body;
 
-  const documentElement = document.body;
+  const currentColorPalette = COLOR_PALETTES.findIndex((colorPalette) => {
+    return (
+      body.style.getPropertyValue('--primary') === colorPalette.primary &&
+      body.style.getPropertyValue('--secondary') === colorPalette.secondary &&
+      body.style.getPropertyValue('--tertiary') === colorPalette.tertiary
+    );
+  });
 
-  documentElement.style.setProperty('--primary', randomColorPalette.primary);
-  documentElement.style.setProperty(
-    '--secondary',
-    randomColorPalette.secondary
+  // Make sure we don't pick the same color palette again
+  const filteredColorPalettes = COLOR_PALETTES.filter(
+    (_, index) => index !== currentColorPalette
   );
-  documentElement.style.setProperty('--tertiary', randomColorPalette.tertiary);
+
+  const randomIndex = Math.floor(Math.random() * filteredColorPalettes.length);
+  const randomColorPalette = filteredColorPalettes[randomIndex];
+
+  body.style.setProperty('--primary', randomColorPalette.primary);
+  body.style.setProperty('--secondary', randomColorPalette.secondary);
+  body.style.setProperty('--tertiary', randomColorPalette.tertiary);
 };

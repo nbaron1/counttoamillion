@@ -466,6 +466,62 @@ function PageNumbers({
   );
 }
 
+function GoogleSignIn() {
+  return (
+    <svg
+      width='20'
+      height='20'
+      viewBox='0 0 20 20'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <g clip-path='url(#clip0_1123_2210)'>
+        <path
+          d='M10.4 9.1V11.8333H16.9334C16.7334 13.3667 16.2225 14.4892 15.4442 15.2775C14.4884 16.2333 13 17.2775 10.4 17.2775C6.37753 17.2775 3.23336 14.0333 3.23336 10.0108C3.23336 5.98833 6.37753 2.74417 10.4 2.74417C12.5667 2.74417 14.1559 3.6 15.3225 4.7L17.245 2.7775C15.6225 1.2 13.4442 0 10.4 0C4.88919 0 0.255859 4.48917 0.255859 10C0.255859 15.5108 4.88919 20 10.4 20C13.3775 20 15.6225 19.0225 17.3775 17.2C19.1775 15.4 19.7442 12.8558 19.7442 10.8108C19.7442 10.1775 19.7 9.58833 19.6 9.1H10.4Z'
+          fill='white'
+        />
+      </g>
+      <defs>
+        <clipPath id='clip0_1123_2210'>
+          <rect width='20' height='20' fill='white' />
+        </clipPath>
+      </defs>
+    </svg>
+  );
+}
+
+function SaveProgress() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger>Save progress</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className='fixed top-0 left-0 bottom-0 right-0' />
+        <Dialog.Content className='left-5 right-5 py-7 px-6 fade-in-content gap-5 flex-col rounded-3xl bg-secondary border border-tertiary fixed top-1/2 -translate-y-1/2 flex justify-between items-center md:w-[400px] md:left-1/2 md:-translate-x-1/2'>
+          <div className='flex justify-between items-center w-full'>
+            <Dialog.Title className='text-gray-50 text-xl'>
+              Save your progress
+            </Dialog.Title>
+            <Dialog.Close>
+              <CloseIcon />
+            </Dialog.Close>
+          </div>
+          <p className='text-white'>
+            Don’t lose your progress if you change computers or clear your
+            cookies
+          </p>
+          <a
+            href='/auth/google'
+            className='w-full text-white py-3 flex items-center justify-center gap-6 bg-primary border border-tertiary rounded-xl'
+          >
+            <GoogleSignIn />
+            Sign in with Google
+          </a>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function Leaderboard() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
@@ -618,7 +674,7 @@ function Home() {
 
   const isGameOngoing = useVerifyGameIsOngoing();
   const [currentNumberInput, setCurrentNumberInput] = useState<string>('');
-  const [number, setNumber] = useState<number | null>(0);
+  const [number, setNumber] = useState<number | null>(null);
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
   const { user } = useUser();
@@ -630,6 +686,15 @@ function Home() {
 
       switch (parsedData.type) {
         case 'update-count': {
+          const isFirstRequest = number === null;
+
+          if (
+            (parsedData.value % 10 === 0 || parsedData.value === 1) &&
+            !isFirstRequest
+          ) {
+            updateColors();
+          }
+
           setNumber(parsedData.value);
           break;
         }
@@ -649,7 +714,7 @@ function Home() {
     });
 
     return unsubscribe;
-  }, [subscribe, setIsVerificationRequired]);
+  }, [subscribe, setIsVerificationRequired, number]);
 
   // focus the input automatically when the verification process is done
   useEffect(() => {
@@ -678,7 +743,6 @@ function Home() {
     );
 
     setCurrentNumberInput('');
-    updateColors();
   };
 
   const handleSuccess = async (token: string) => {
@@ -708,11 +772,7 @@ function Home() {
               </div>
             </div>
             <div className='flex flex-col gap-[2px] text-right text-white'>
-              {user.email ? (
-                <a href='/logout'>Logout</a>
-              ) : (
-                <a href='/auth/google'>Save progress</a>
-              )}
+              {user.email ? <a href='/logout'>Logout</a> : <SaveProgress />}
               <Rank />
             </div>
           </div>
