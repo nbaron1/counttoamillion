@@ -21,6 +21,8 @@ export const guestAuth: RequestHandler = async (req, res) => {
 
     res.cookie('session', session.id, {
       expires: new Date(Date.now() + TEN_YEARS),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' ? true : false,
     });
     res.header('location', '/');
     res.status(200).send({ success: true });
