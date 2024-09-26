@@ -661,7 +661,7 @@ function Home() {
             <Turnstile
               siteKey={config.turnstileSiteKey}
               onSuccess={handleSuccess}
-              options={{ size: 'flexible' }}
+              options={{ size: 'flexible', theme: 'light' }}
             />
           ) : (
             <div className='relative'>
