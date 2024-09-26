@@ -79,8 +79,6 @@ const useWebsocket = (connectionURL: string, topic: string) => {
   const [isLoading, setIsLoading] = useState(true);
   const retryTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
-  const { user } = useUser();
-
   const handleOpen = useCallback(() => {
     setIsLoading(false);
 
@@ -89,57 +87,68 @@ const useWebsocket = (connectionURL: string, topic: string) => {
     });
   }, []);
 
+  const handleClose = useCallback(
+    (event: CloseEvent) => {
+      if (event.code === 1008) {
+        window.location.href = '/auth/guest';
+      }
+
+      if (websocketRef.current) {
+        websocketRef.current.removeEventListener('open', handleOpen);
+      }
+
+      websocketRef.current = null;
+
+      // clear previous timeouts
+      retryTimeoutsRef.current.forEach((timeout) => {
+        clearTimeout(timeout);
+      });
+
+      retryTimeoutsRef.current = [];
+
+      const newTimeout = setTimeout(async () => {
+        connectWebSocket();
+      }, 1500);
+
+      retryTimeoutsRef.current.push(newTimeout);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleOpen]
+  );
+
   const sendMessage = (data: string) => {
     websocketRef.current?.send(data);
   };
 
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
+      eventEmitter.emit(topic, event.data);
+    },
+    [topic]
+  );
+
+  const connectWebSocket = useCallback(async () => {
+    console.log('Connecting to websocket');
+    const websocket = new WebSocket(connectionURL);
+    websocketRef.current = websocket;
+
+    websocket.addEventListener('open', handleOpen);
+    websocket.addEventListener('close', handleClose);
+    websocket.addEventListener('message', handleMessage);
+  }, [connectionURL, handleClose, handleMessage, handleOpen]);
+
   useEffect(() => {
-    const connectWebSocket = async () => {
-      if (!user) return; // Only connect if user is authenticated
-
-      const websocket = new WebSocket(connectionURL);
-
-      websocket.addEventListener('open', handleOpen);
-      websocket.addEventListener('close', (event) => {
-        if (event.code === 1008) {
-          window.location.href = '/auth/guest';
-        }
-
-        if (websocketRef.current) {
-          websocketRef.current.removeEventListener('open', handleOpen);
-        }
-
-        websocketRef.current = null;
-
-        // clear previous timeouts
-        retryTimeoutsRef.current.forEach((timeout) => {
-          clearTimeout(timeout);
-        });
-
-        retryTimeoutsRef.current = [];
-
-        const newTimeout = setTimeout(async () => {
-          connectWebSocket();
-        }, 1500);
-
-        retryTimeoutsRef.current.push(newTimeout);
-      });
-      websocket.addEventListener('message', (event) => {
-        eventEmitter.emit(topic, event.data);
-      });
-
-      websocketRef.current = websocket;
-    };
-
     connectWebSocket();
 
     return () => {
       if (websocketRef.current) {
         websocketRef.current.removeEventListener('open', handleOpen);
+        websocketRef.current.removeEventListener('close', handleClose);
+        websocketRef.current.removeEventListener('message', handleMessage);
         websocketRef.current.close();
       }
     };
-  }, [connectionURL, handleOpen, topic, user]);
+  }, [connectWebSocket, handleClose, handleMessage, handleOpen]);
 
   return { isLoading, sendMessage };
 };
@@ -559,7 +568,10 @@ function Leaderboard() {
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger className='text-left '>Leaderboard</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Content className='shadow-sm md:w-[500px] flex flex-col border gap-4 justify-between md:max-w-[800px] px-6 py-6 md:left-1/2 h-[75vh] md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-1/2 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'>
+        <Dialog.Content
+          aria-describedby={undefined}
+          className='shadow-sm md:w-[500px] flex flex-col border gap-4 justify-between md:max-w-[800px] px-6 py-6 md:left-1/2 h-[75vh] md:-translate-x-1/2 md:right-auto fade-in-content top-1/2 left-3 right-3 -translate-y-1/2 fixed z-10 bg-secondary rounded-xl text-white border-tertiary'
+        >
           <div className='flex flex-col gap-4 min-h-0'>
             <div className='flex justify-between items-center'>
               <div>
