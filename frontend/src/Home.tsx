@@ -603,7 +603,6 @@ function Leaderboard() {
     try {
       const response = await authAxios.get('/users/count');
       const count = response.data.data.count;
-      console.log({ count });
 
       return count;
     } catch (error) {
@@ -682,9 +681,8 @@ function Leaderboard() {
 
   const handleGoToYourRanking = async () => {
     const position = await getUserPosition();
-    console.log({ position });
-
     const page = Math.ceil(position / USERS_PER_PAGE);
+
     setPage(page);
     setIsSkippingToYourRanking(true);
     goToSlide(Math.floor(page / 5));
