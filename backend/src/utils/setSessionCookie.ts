@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-const TEN_YEARS = 1000 * 60 * 60 * 24 * 365 * 10;
+const ONE_YEAR = 1000 * 60 * 60 * 24 * 365;
 
 export const setSessionCookie = (res: Response, sessionId: string) => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -11,7 +11,7 @@ export const setSessionCookie = (res: Response, sessionId: string) => {
   }
 
   res.cookie('session', sessionId, {
-    expires: new Date(Date.now() + TEN_YEARS),
+    expires: new Date(Date.now() + ONE_YEAR),
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
