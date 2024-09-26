@@ -9,7 +9,6 @@ export function GoogleAuthCallback() {
     try {
       await authAxios.post('/auth/google', { code });
     } catch {
-      // todo: add sentry logging
       window.location.href = '/auth/failed';
     }
   }, []);

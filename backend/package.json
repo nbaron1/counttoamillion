@@ -4,14 +4,18 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "build": "tsc",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+    "build": "tsc && npm run sentry:sourcemaps",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org folds-fp --project counttoamillion-backend ./dist && sentry-cli sourcemaps upload --org folds-fp --project counttoamillion-backend ./dist"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sentry/cli": "^2.36.2",
+    "@sentry/node": "^8.32.0",
+    "@sentry/profiling-node": "^8.32.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

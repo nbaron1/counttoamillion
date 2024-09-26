@@ -25,3 +25,5 @@ dist-ssr
 
 tsconfig.app.tsbuildinfo
 tsconfig.node.tsbuildinfo
+# Sentry Config File
+.env.sentry-build-plugin

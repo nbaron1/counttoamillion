@@ -1,3 +1,4 @@
+import './sentry';
 import express, { NextFunction, Request, Response } from 'express';
 import expressWs from 'express-ws';
 import cors from 'cors';
@@ -43,7 +44,6 @@ class Session {
     }
 
     const isExpired = new Date(session.expires_at).getTime() < Date.now();
-    console.log({ isExpired });
 
     if (isExpired) {
       await sql`delete from session where id = ${this.id}`;
@@ -164,7 +164,6 @@ app.post('/auth/google', async (req, res) => {
     res.header('location', '/');
     res.status(200).json({ success: true });
   } catch (error) {
-    console.log(error);
     res.status(500).send({ error: 'Internal Server Error', success: false });
   }
 });

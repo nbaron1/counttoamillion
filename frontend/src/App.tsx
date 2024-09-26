@@ -53,6 +53,7 @@ export function App() {
     updateColors();
   }, []);
 
+  throw new Error('This is a test error');
   return (
     <>
       <RouterProvider router={router} />
