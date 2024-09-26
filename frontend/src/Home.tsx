@@ -738,6 +738,7 @@ function Home() {
   const subscribe = useSubscribe();
   const { user } = useUser();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [turnstileError, setTurnstileError] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
@@ -851,11 +852,22 @@ function Home() {
 
         <div className='fixed bottom-3 left-3 right-3 md:left-1/2 md:bottom-6 md:-translate-x-1/2 md:w-[350px] md:right-auto'>
           {isVerificationRequired ? (
-            <Turnstile
-              siteKey={config.turnstileSiteKey}
-              onSuccess={handleSuccess}
-              options={{ size: 'flexible', theme: 'light' }}
-            />
+            <div className='flex flex-col gap-2'>
+              <Turnstile
+                siteKey={config.turnstileSiteKey}
+                onSuccess={handleSuccess}
+                onError={() => setTurnstileError(true)}
+                options={{ size: 'flexible', theme: 'light' }}
+              />
+              {turnstileError && (
+                <button
+                  className='w-full rounded-lg py-3 bg-secondary border border-tertiary text-white'
+                  onClick={() => window.location.reload()}
+                >
+                  Retry verification
+                </button>
+              )}
+            </div>
           ) : (
             <div className='relative'>
               <input
