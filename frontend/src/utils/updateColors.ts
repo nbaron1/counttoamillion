@@ -10,7 +10,7 @@ const COLOR_PALETTES: {
   },
   {
     primary: '#0F28A8',
-    secondary: '#1F28FF',
+    secondary: '#2830EE',
     tertiary: '#3F50EE',
   },
   {

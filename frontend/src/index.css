@@ -56,3 +56,7 @@ body {
 .slick-slide {
   transform: translateY(-1.5px);
 }
+/* LastPass isn't necessary on this website & is negatively affecting the styling */
+[data-lastpass-icon-root] {
+  display: none !important;
+}

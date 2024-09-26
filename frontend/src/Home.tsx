@@ -276,6 +276,65 @@ function ChevronUp() {
   );
 }
 
+function MobileUsername() {
+  const { user, revalidate } = useUser();
+
+  const [currentUsername, setCurrentUsername] = useState(user.username);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentUsername(user.username);
+  }, [user.username]);
+
+  const handleSaveUsername = async () => {
+    try {
+      toast.loading('Saving username...', { id: 'save-username' });
+
+      await authAxios.put('/users/me/username', {
+        username: currentUsername,
+      });
+
+      toast.success('Username saved', { id: 'save-username' });
+
+      setIsOpen(false);
+      revalidate();
+    } catch (error) {
+      console.error(error);
+
+      toast.error('Failed to update username', { id: 'save-username' });
+    }
+  };
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog.Trigger>{user.username}</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Content className='flex flex-col px-5 py-6 fade-in-contents gap-2 rounded-2xl bg-secondary border border-tertiary fixed top-1/2 left-3 right-3 -translate-y-1/2'>
+          <Dialog.Title className='flex justify-between items-center'>
+            <h2 className='text-lg text-white'>Update username</h2>
+            <Dialog.Close>
+              <CloseIcon />
+            </Dialog.Close>
+          </Dialog.Title>
+          <input
+            value={currentUsername}
+            onChange={(event) => setCurrentUsername(event.target.value)}
+            placeholder='Enter your username'
+            name='username'
+            className='rounded-xl border bg-primary border-tertiary text-white py-4 outline-none px-5'
+          />
+          <button
+            className='bg-primary border-tertiary border text-white py-4 rounded-xl'
+            onClick={handleSaveUsername}
+          >
+            Save username
+          </button>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function DesktopUsername() {
   const { user, revalidate } = useUser();
 
@@ -767,7 +826,10 @@ function Home() {
           <div className='flex justify-between'>
             <div className='flex flex-col gap-[2px] text-white'>
               <Leaderboard />
-              <div className=''>
+              <div className='sm:hidden'>
+                <MobileUsername />
+              </div>
+              <div className='hidden sm:block'>
                 <DesktopUsername />
               </div>
             </div>
