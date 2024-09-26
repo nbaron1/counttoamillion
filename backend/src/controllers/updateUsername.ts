@@ -18,6 +18,11 @@ export const updateUsername: RequestHandler = async (req, res) => {
 
     const username = req.body.username;
 
+    if (username.length === 0) {
+      res.status(400).json({ error: 'Bad Request', success: false });
+      return;
+    }
+
     const moderatedUsername = await moderateText(username);
 
     if (moderatedUsername === null) {

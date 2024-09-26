@@ -326,7 +326,7 @@ function MobileUsername() {
             onChange={(event) => setCurrentUsername(event.target.value)}
             placeholder='Enter your username'
             name='username'
-            className='rounded-xl border bg-primary border-tertiary text-white py-4 outline-none px-5'
+            className='placeholder:text-gray-50 rounded-xl border bg-primary border-tertiary text-white py-4 outline-none px-5'
           />
           <button
             className='bg-primary border-tertiary border text-white py-4 rounded-xl'
@@ -391,7 +391,7 @@ function DesktopUsername() {
             value={currentUsername}
             onChange={(event) => setCurrentUsername(event.target.value)}
             placeholder='Enter your username'
-            className='py-2 px-4 outline-none bg-transparent rounded-xl border border-tertiary text-white'
+            className='placeholder:text-gray-50 py-2 px-4 outline-none bg-transparent rounded-xl border border-tertiary text-white'
             name='username'
           />
           <button
