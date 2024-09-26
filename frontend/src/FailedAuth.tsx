@@ -8,9 +8,10 @@ export function FailedAuth() {
   }, []);
 
   return (
-    <p className='text-white text-center'>
-      Something went wrong. We weren't able to log you on. Redirect to the
-      homepage...
+    <p className='text-white text-center mt-12 text-xl leading-[2]'>
+      Something went wrong. We were unable to log you in.
+      <br />
+      Redirecting you to the homepage...
     </p>
   );
 }
