@@ -9,6 +9,13 @@ body {
   background-color: var(--primary);
 }
 
+/* https://www.bram.us/2016/05/02/prevent-overscroll-bounce-in-ios-mobilesafari-pure-css/  */
+body,
+html {
+  position: fixed;
+  overflow: hidden;
+}
+
 * {
   transition-property: color, background-color, border-color,
     text-decoration-color, fill, stroke, outline-color;
