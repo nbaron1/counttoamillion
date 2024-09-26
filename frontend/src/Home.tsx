@@ -602,6 +602,7 @@ function Home() {
   const [isVerificationRequired, setIsVerificationRequired] = useState(true);
   const subscribe = useSubscribe();
   const { user } = useUser();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
@@ -629,6 +630,13 @@ function Home() {
 
     return unsubscribe;
   }, [subscribe, setIsVerificationRequired]);
+
+  // focus the input automatically when the verification process is done
+  useEffect(() => {
+    if (isVerificationRequired) return;
+
+    inputRef.current?.focus();
+  }, [isVerificationRequired]);
 
   if (!isGameOngoing) {
     return (
@@ -712,7 +720,9 @@ function Home() {
                 type='text'
                 placeholder='Write next number'
                 value={currentNumberInput}
+                ref={inputRef}
                 onChange={(event) => setCurrentNumberInput(event.target.value)}
+                autoFocus
                 className='fade-in placeholder:text-gray-200 rounded-2xl h-[60px] outline-none bg-secondary px-5 w-full border text-white border-tertiary'
                 onKeyDown={handleKeyDown}
               />
