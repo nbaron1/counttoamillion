@@ -15,6 +15,5 @@ export const setSessionCookie = (res: Response, sessionId: string) => {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
-    domain: '.counttoamillion.com',
   });
 };
