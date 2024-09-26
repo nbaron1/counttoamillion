@@ -22,14 +22,14 @@ export class Users {
         a.*,
         au.*,
         au.id AS id,
-        RANK() OVER (ORDER BY a.score DESC) AS rank,
-        ROW_NUMBER() OVER (order by score desc) as position
+        DENSE_RANK() OVER (ORDER BY a.score DESC, au.created_at ASC) AS rank,
+        ROW_NUMBER() OVER (ORDER BY a.score DESC, au.created_at ASC) as position
     FROM 
         app_user au
     JOIN 
         attempt a ON au.current_attempt_id = a.id
     ORDER BY 
-        a.score DESC, au.username
+        a.score DESC, au.created_at ASC
     LIMIT ${limit}
     OFFSET ${offset}`;
 

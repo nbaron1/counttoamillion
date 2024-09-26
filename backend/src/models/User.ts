@@ -32,18 +32,23 @@ export class User {
 
   async getRank() {
     const [userRank] = await sql`
-      with ranked_users as (
-        select 
-          app_user.id, 
-          score,
-          dense_rank() over (order by score desc) as rank,
-          row_number() OVER (order BY score DESC) AS position
-        from app_user
-        inner join attempt on app_user.current_attempt_id = attempt.id 
-      )
-      select rank, position
-      from ranked_users
-      where id = ${this.id}`;
+    WITH ranked_users AS (
+        SELECT 
+            au.id,
+            a.score,
+            DENSE_RANK() OVER (ORDER BY a.score DESC, au.created_at ASC) AS rank,
+            ROW_NUMBER() OVER (ORDER BY a.score DESC, au.created_at ASC) as position
+        FROM 
+            app_user au
+        JOIN 
+            attempt a ON au.current_attempt_id = a.id
+    )
+    SELECT 
+      ru.*
+    FROM 
+        ranked_users ru
+    WHERE 
+        ru.id = ${this.id}`;
 
     const data = {
       rank: Number(userRank.rank),
