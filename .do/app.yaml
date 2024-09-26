@@ -1,7 +1,0 @@
-name: counttoamillion
-services:
-  - name: counttoamillion
-    envs:
-    github:
-      branch: main
-      repo: digitalocean/counttoamillion

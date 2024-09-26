@@ -9,10 +9,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Deploy the app
-        uses: digitalocean/app_action/deploy@v2
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Trigger App Platform deployment
+        run: doctl apps create-deployment ${{ secrets.APP_ID }}
 
   deploy-frontend:
     name: Deploy Frontend
