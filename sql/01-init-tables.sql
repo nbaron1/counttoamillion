@@ -2,11 +2,8 @@ create table app_user (
   id uuid primary key,
   created_at timestamp not null default now(),
   username text not null,
-  high_score int not null default 1,
   email text unique
 );
-
-CREATE INDEX idx_app_user_id_high_score ON app_user(id, high_score);
 
 create table attempt (
   id serial primary key,

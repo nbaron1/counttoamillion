@@ -18,21 +18,30 @@ export class Users {
     const offset = (page - 1) * limit;
 
     const users = await sql`
-    with ranked_users as (
-      select
-        *,
-        dense_rank() over (order by score desc) as rank,
-        row_number() OVER (order by score desc) as position
-      from app_user
-      inner join attempt on app_user.current_attempt_id = attempt.id
-    )
-    select *
-    from ranked_users
-    order by rank asc
-    limit ${limit}
-    offset ${offset}`;
+    SELECT 
+        a.*,
+        au.*,
+        au.id AS id,
+        RANK() OVER (ORDER BY a.score DESC) AS rank,
+        ROW_NUMBER() OVER (order by score desc) as position
+    FROM 
+        app_user au
+    JOIN 
+        attempt a ON au.current_attempt_id = a.id
+    ORDER BY 
+        a.score DESC, au.username
+    LIMIT ${limit}
+    OFFSET ${offset}`;
 
-    return users;
+    const mappedUsers = users.map((user: any) => {
+      return {
+        ...user,
+        rank: Number(user.rank),
+        position: Number(user.position),
+      };
+    });
+
+    return mappedUsers;
   }
 
   async create(email: string | null) {
@@ -53,7 +62,8 @@ export class Users {
 
       await sql`
         UPDATE app_user
-        SET current_attempt_id = ${newAttempt.id}`;
+        SET current_attempt_id = ${newAttempt.id}
+        WHERE id = ${user.id}`;
 
       return { session, user };
     });

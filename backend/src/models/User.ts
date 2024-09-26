@@ -35,7 +35,6 @@ export class User {
       with ranked_users as (
         select 
           app_user.id, 
-          high_score,
           score,
           dense_rank() over (order by score desc) as rank,
           row_number() OVER (order BY score DESC) AS position

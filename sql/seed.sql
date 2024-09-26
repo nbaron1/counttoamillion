@@ -23,11 +23,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Insert 150 app users
-INSERT INTO app_user (id, username, high_score, email)
+INSERT INTO app_user (id, username, email)
 SELECT 
   uuid_generate_v4(),
   random_username(),
-  floor(random() * 1000 + 1),
   random_email()
 FROM generate_series(1, 150);
 

@@ -450,16 +450,16 @@ const LeadboardDialogContent = forwardRef<
 
   return (
     <div className='flex flex-col gap-2 overflow-y-scroll' ref={ref}>
-      {users.map(({ score, rank, username, user_id }) => {
+      {users.map(({ score, rank, username, id }) => {
         return (
           <div
-            id={`user-${user_id}`}
-            key={user_id}
+            id={`user-${id}`}
+            key={id}
             className='flex justify-between items-center'
           >
             <p>
               {rank}.{' '}
-              <span className={user.id === user_id ? 'underline' : ''}>
+              <span className={user.id === id ? 'underline' : ''}>
                 {username}
               </span>
             </p>
@@ -679,6 +679,7 @@ function Leaderboard() {
 
   const handleGoToYourRanking = async () => {
     const position = await getUserPosition();
+    console.log({ position });
 
     const page = Math.ceil(position / USERS_PER_PAGE);
     setPage(page);
