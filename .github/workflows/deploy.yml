@@ -67,6 +67,7 @@ jobs:
           VITE_BACKEND_WEBSOCKET_HOST: wss://api.counttoamillion.com
           VITE_CF_TURNSTILE_KEY: ${{ secrets.CF_TURNSTILE_SITE_KEY }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_REDIRECT_URI: https://counttoamillion.com/auth/google/callback
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:

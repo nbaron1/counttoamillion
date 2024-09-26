@@ -7,7 +7,7 @@ export function GoogleAuth() {
 
   const initiateGoogleLogin = useCallback(() => {
     const clientId = config.googleClientId;
-    const redirectUri = 'http://localhost:3000/auth/google/callback';
+    const redirectUri = config.googleRedirectURI;
     const scope = 'email profile';
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;

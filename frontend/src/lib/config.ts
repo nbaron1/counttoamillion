@@ -13,4 +13,5 @@ export const config = {
   turnstileSiteKey: throwIfMissing('VITE_CF_TURNSTILE_KEY'),
   backendApiHost: throwIfMissing('VITE_BACKEND_API_HOST'),
   googleClientId: throwIfMissing('VITE_GOOGLE_CLIENT_ID'),
+  googleRedirectURI: throwIfMissing('VITE_GOOGLE_REDIRECT_URI'),
 } as const;
