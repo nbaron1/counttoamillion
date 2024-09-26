@@ -4,19 +4,19 @@ on:
     branches:
       - main
 jobs:
-  deploy-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # deploy-backend:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+  #     - name: Install doctl
+  #       uses: digitalocean/action-doctl@v2
+  #       with:
+  #         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-      - name: Trigger App Platform deployment
-        run: doctl apps create-deployment ${{ secrets.APP_ID }}
+  #     - name: Trigger App Platform deployment
+  #       run: doctl apps create-deployment ${{ secrets.APP_ID }}
 
   deploy-frontend:
     name: Deploy Frontend
