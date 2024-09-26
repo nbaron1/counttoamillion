@@ -4,46 +4,16 @@ on:
     branches:
       - main
 jobs:
-  # TODO: Apply prisma migrations
-  # migrate-db:
-  #   runs-on: ubuntu-latest
-  #   name: Migrate Database
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         node-version: '18'
-
-  #     - uses: supabase/setup-cli@v1
-  #       with:
-  #         version: latest
-
-  #     - name: Run Migrations
-  #       env:
-  #         SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  #         SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-  #         SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-  #         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-  #         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-  #       run: |
-  #         supabase link --project-ref $SUPABASE_PROJECT_ID
-  #         supabase db push
-
-  # TODO: Deploy digitalocean app
-  # deploy-worker:
-  #   needs: migrate-db
-  #   name: Deploy Worker
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Deploy
-  #       uses: cloudflare/wrangler-action@v3
-  #       with:
-  #         command: deploy --compatibility-flags="nodejs_compat"
-  #         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  #         workingDirectory: backend
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Deploy the app
+        uses: digitalocean/app_action/deploy@v2
+        env:
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
   deploy-frontend:
     name: Deploy Frontend
