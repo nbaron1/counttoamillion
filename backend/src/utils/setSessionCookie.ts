@@ -14,7 +14,7 @@ export const setSessionCookie = (res: Response, sessionId: string) => {
     expires: new Date(Date.now() + TEN_YEARS),
     httpOnly: true,
     secure: true,
-    sameSite: 'lax',
+    sameSite: 'none',
     domain: '.counttoamillion.com',
   });
 };
