@@ -8,9 +8,8 @@ const capitalizeWord = (word: string) => {
 export const generateRandomUsername = () => {
   const adjective = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const randomNumber = Math.floor(Math.random() * 1000);
 
-  return `${capitalizeWord(adjective)} ${capitalizeWord(noun)} ${randomNumber}`;
+  return `${capitalizeWord(adjective)} ${capitalizeWord(noun)}`;
 };
 
 const ADJECTIVES = [

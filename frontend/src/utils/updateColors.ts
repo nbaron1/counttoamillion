@@ -18,6 +18,16 @@ const COLOR_PALETTES: {
     secondary: '#FF58F8',
     tertiary: '#FF74F9',
   },
+  {
+    primary: '#0C8351',
+    secondary: '#0FA868',
+    tertiary: '#11C077',
+  },
+  {
+    primary: '#D35813',
+    secondary: '#EC7531',
+    tertiary: '#EE8144',
+  },
 ];
 
 export const updateColors = () => {

@@ -6,7 +6,17 @@ export const redisClient = createClient({
 });
 
 redisClient.on('error', (error) => {
-  console.log('Redis publisher error: ', error);
+  console.log('Redis client error: ', error);
 });
 
 redisClient.connect();
+
+export const redisSubscriber = createClient({
+  url: config.redisURL,
+});
+
+redisSubscriber.on('error', (error) => {
+  console.log('Redis subscriber error: ', error);
+});
+
+redisSubscriber.connect();

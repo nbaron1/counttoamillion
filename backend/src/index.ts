@@ -5,6 +5,7 @@ import { config } from './config';
 import { sql } from './sql';
 import cookieParser from 'cookie-parser';
 import { generateRandomUsername } from './utils/generateARandomUsername';
+import { redisClient, redisSubscriber } from './redis';
 
 const app = expressWs(express()).app;
 app.use(express.json());
@@ -249,7 +250,7 @@ const protectRoute = async (
 
   if (typeof sessionToken !== 'string') {
     res.header('location', '/auth/guest');
-    res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized', success: false });
     return;
   }
 
@@ -258,7 +259,7 @@ const protectRoute = async (
 
   if (!session) {
     res.header('location', '/auth/guest');
-    res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized', success: false });
     return;
   }
 
@@ -266,7 +267,7 @@ const protectRoute = async (
 
   if (isExpired) {
     res.header('location', '/auth/guest');
-    res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized', success: false });
     return;
   }
 
@@ -275,7 +276,7 @@ const protectRoute = async (
 
   if (!user) {
     res.header('location', '/auth/guest');
-    res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized', success: false });
     return;
   }
 
@@ -334,7 +335,7 @@ app.get('/users/count', protectRoute, async (_, res) => {
   }
 });
 
-app.get('/game-status', protectRoute, async (req, res) => {
+app.get('/game-status', async (req, res) => {
   try {
     const [gameStatus] = await sql`select * from game_status where id = 1`;
 
@@ -362,6 +363,25 @@ app.get('/users/me', protectRoute, async (req, res) => {
 
     res.status(200).json({ data: { user }, success: true });
   } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error', success: false });
+  }
+});
+
+app.get('/users/:userId', protectRoute, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const [user] = await sql`select * from app_user where id = ${userId}`;
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found', success: false });
+      return;
+    }
+
+    res.status(200).json({ data: { user }, success: true });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Internal Server Error', success: false });
   }
 });
@@ -387,6 +407,7 @@ app.put('/users/me/username', protectRoute, async (req, res) => {
 
     res.status(200).json({ data: { user }, success: true });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Internal Server Error', success: false });
   }
 });
@@ -402,6 +423,7 @@ app.get('/users/me/rank', protectRoute, async (req, res) => {
 
     res.status(200).json({ data: { position, rank }, success: true });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Internal Server Error', success: false });
   }
 });
@@ -445,6 +467,19 @@ app.ws('/score', async (ws, request) => {
       ws.close(1008, 'Unauthorized');
       return;
     }
+
+    const [isGameOver] =
+      await sql`select ended_at from game_status where id = 1`;
+
+    if (isGameOver.ended_at !== null) {
+      ws.send(JSON.stringify({ type: 'game-over' }));
+      ws.close(1000, 'Game over');
+      return;
+    }
+
+    await redisSubscriber.subscribe('game-over', () => {
+      ws.send(JSON.stringify({ type: 'game-over' }));
+    });
 
     const currentScore = Number(currentAttempt.score);
 
@@ -558,6 +593,16 @@ app.ws('/score', async (ws, request) => {
           ws.send(
             JSON.stringify({ type: 'update-count', value: parsedData.value })
           );
+
+          const ONE_MILLION = 1000000;
+
+          if (currentCount + 1 >= ONE_MILLION) {
+            await sql`update game_status set ended_at = now() at time zone 'utc', winner_id = ${user.id} where id = 1`;
+            await redisClient.publish('game-over', '1');
+
+            // ws.send(JSON.stringify({ type: 'game-over' }));
+            return;
+          }
 
           const newRequestsSinceVerification = requestsSinceVerification + 1;
 

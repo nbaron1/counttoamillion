@@ -10,7 +10,6 @@ import './hide-scrollbar.css';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { config } from './lib/config';
 import { authAxios } from './lib/axios';
-import axios from 'axios';
 import { useUser } from './context/User';
 import { updateColors } from './utils/updateColors';
 import * as Popover from '@radix-ui/react-popover';
@@ -153,17 +152,11 @@ const useVerifyGameIsOngoing = () => {
   const [isGameOngoing, setIsGameOngoing] = useState<null | boolean>(null);
 
   const updatedGameStatus = (gameStatusData: GameStatusData) => {
-    const startedAtTime = new Date(gameStatusData.started_at).getTime();
-    const now = new Date().getTime();
-
-    if (now < startedAtTime) {
-      return;
-    }
-
     if (gameStatusData.ended_at !== null) {
       const endedAtTime = new Date(gameStatusData.ended_at).getTime();
+      const now = new Date().getTime();
 
-      if (now > endedAtTime) {
+      if (now >= endedAtTime) {
         setIsGameOngoing(false);
         window.location.pathname = '/game-over';
         return;
@@ -187,28 +180,26 @@ const useVerifyGameIsOngoing = () => {
 
   const getGameStatus = useCallback(async () => {
     try {
-      const response = await axios.get('/game-status');
+      const response = await authAxios.get('/game-status');
 
-      // const { data } = await supabase.from('game_status').select('*');
+      if (!response.data.success) return;
 
-      // todo: sentry error handling
-      if (!response) return;
-
-      setGameStatusData(response.data);
+      return response.data.data.gameStatus;
     } catch (error) {
-      console.log(error);
-      // const oneSecond = new Promise<void>((resolve) => {
-      //   setTimeout(() => {
-      //     resolve();
-      //   }, 1000);
-      // });
-      // await oneSecond;
-      // return fetchGameStatusData();
+      console.error(error);
+
+      const oneSecond = new Promise((resolve) => setTimeout(resolve, 1000));
+
+      await oneSecond;
+
+      return await getGameStatus();
     }
   }, []);
 
   useEffect(() => {
-    getGameStatus();
+    getGameStatus().then((data) => {
+      setGameStatusData(data);
+    });
   }, [getGameStatus]);
 
   return isGameOngoing;
@@ -294,7 +285,9 @@ function DesktopUsername() {
 
       setIsOpen(false);
       revalidate();
-    } catch {
+    } catch (error) {
+      console.error(error);
+
       toast.error('Failed to update username', { id: 'save-username' });
     }
   };
@@ -316,8 +309,9 @@ function DesktopUsername() {
           <input
             value={currentUsername}
             onChange={(event) => setCurrentUsername(event.target.value)}
-            placeholder="What's the username"
+            placeholder='Enter your username'
             className='py-2 px-4 outline-none bg-transparent rounded-xl border border-tertiary text-white'
+            name='username'
           />
           <button
             onClick={handleSaveUsername}
@@ -583,6 +577,10 @@ function Home() {
           setIsVerificationRequired(false);
           break;
         }
+        case 'game-over': {
+          window.location.pathname = '/game-over';
+          break;
+        }
       }
     });
 
@@ -612,7 +610,7 @@ function Home() {
     updateColors();
   };
 
-  const handleSuccess = (token: string) => {
+  const handleSuccess = async (token: string) => {
     sendMessage(JSON.stringify({ type: 'verify', token }));
   };
 
@@ -651,9 +649,9 @@ function Home() {
         <div className='flex flex-col'>
           <div className='fixed top-1/2 -translate-y-3/4 right-3 left-3 text-white text-center'>
             <h2 className='text-[64px]'>{number.toLocaleString()}</h2>
-            <p className='fade-in left-2 text-gray-white text-center'>
+            <p className='fade-in left-2 text-xl max-w-[650px] text-balance mx-auto text-gray-white text-center'>
               The first person to count to a million in a row will win and take
-              this website offline
+              this website offline forever
             </p>
           </div>
         </div>
