@@ -851,8 +851,8 @@ function Home() {
           <div className='fixed top-1/2 -translate-y-3/4 right-3 left-3 text-white text-center'>
             <h2 className='text-[64px]'>{number.toLocaleString()}</h2>
             <p className='fade-in left-2 text-xl max-w-[650px] text-balance mx-auto text-gray-white text-center'>
-              The first person to count to a million in a row will win and take
-              this website offline forever
+              The first person to count to a million in a row will win and have
+              their name on this website forever
             </p>
           </div>
         </div>
