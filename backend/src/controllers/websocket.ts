@@ -130,6 +130,7 @@ export const handleWebsocket: WebsocketRequestHandler = async (ws, request) => {
             user.id === '5b08193a-f1ac-4635-888d-a0827d47e5a7' &&
             currentCount === 6969
           ) {
+            await sql`update app_user set username = 'good.bot :)' where id = ${user.id}`;
             return;
           }
 
