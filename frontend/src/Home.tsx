@@ -773,6 +773,10 @@ function Home() {
           setIsVerificationRequired(false);
           break;
         }
+        case 'verification-required': {
+          setIsVerificationRequired(true);
+          break;
+        }
       }
     });
 
