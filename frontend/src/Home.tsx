@@ -765,14 +765,6 @@ function Home() {
           setNumber(parsedData.value);
           break;
         }
-        case 'verification-required': {
-          setIsVerificationRequired(true);
-          break;
-        }
-        case 'verified': {
-          setIsVerificationRequired(false);
-          break;
-        }
         case 'game-over': {
           window.location.pathname = '/game-over';
           break;

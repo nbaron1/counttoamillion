@@ -125,6 +125,14 @@ export const handleWebsocket: WebsocketRequestHandler = async (ws, request) => {
 
           const currentCount = Number(currentAttempt.score);
 
+          // freeze bad.bot at 6969
+          if (
+            user.id === '5b08193a-f1ac-4635-888d-a0827d47e5a7' &&
+            currentCount === 6969
+          ) {
+            return;
+          }
+
           if (currentCount + 1 != parsedData.value) {
             await sql`WITH inserted AS (
                            INSERT INTO attempt (user_id, score)
