@@ -750,7 +750,7 @@ function Home() {
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
       const parsedData = JSON.parse(data);
-      console.log(parsedData);
+
       switch (parsedData.type) {
         case 'update-count': {
           const isFirstRequest = number === null;
