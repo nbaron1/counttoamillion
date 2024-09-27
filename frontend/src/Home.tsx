@@ -750,7 +750,7 @@ function Home() {
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
       const parsedData = JSON.parse(data);
-
+      console.log(parsedData);
       switch (parsedData.type) {
         case 'update-count': {
           const isFirstRequest = number === null;
@@ -767,6 +767,10 @@ function Home() {
         }
         case 'game-over': {
           window.location.pathname = '/game-over';
+          break;
+        }
+        case 'verified': {
+          setIsVerificationRequired(false);
           break;
         }
       }
