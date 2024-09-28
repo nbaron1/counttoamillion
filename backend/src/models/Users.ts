@@ -19,8 +19,8 @@ export class Users {
 
     const users = await sql`
     SELECT 
-        a.*,
-        au.*,
+        a.score,
+        au.username,
         au.id AS id,
         DENSE_RANK() OVER (ORDER BY a.score DESC, au.created_at ASC) AS rank,
         ROW_NUMBER() OVER (ORDER BY a.score DESC, au.created_at ASC) as position
