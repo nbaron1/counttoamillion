@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { updateColors } from './utils/updateColors';
 import { Toaster } from 'react-hot-toast';
 import { GameOver } from './GameOver';
+import DisableDevtool from 'disable-devtool';
 
 const router = createBrowserRouter([
   {
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
 export function App() {
   useEffect(() => {
     updateColors();
+  }, []);
+
+  useEffect(() => {
+    DisableDevtool();
   }, []);
 
   return (
