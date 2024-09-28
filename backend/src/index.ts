@@ -21,26 +21,33 @@ const app = expressWs(express()).app;
 app.use(express.json());
 app.use(cookieParser());
 
-if (process.env.NODE_ENV === 'development') {
-  app.use(
-    cors({
-      origin: ['http://localhost:3000'],
-      credentials: true,
-      exposedHeaders: ['Location'],
-    })
-  );
-} else {
-  app.use(
-    cors({
-      origin: [
-        'https://counttoamillion.com',
-        'https://www.counttoamillion.com',
-      ],
-      credentials: true,
-      exposedHeaders: ['Location'],
-    })
-  );
-}
+const allowedOrigins =
+  process.env.NODE_ENV === 'development'
+    ? ['http://localhost:3000']
+    : ['https://counttoamillion.com', 'https://www.counttoamillion.com'];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (!origin) {
+    return res.sendStatus(401);
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Expose-Headers', 'Location');
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || !allowedOrigins.includes(origin)) {
+    return res.status(401).sendStatus(401);
+  }
+  next();
+});
 
 app.post('/auth/google', googleAuth);
 app.post('/auth/logout', logout);
