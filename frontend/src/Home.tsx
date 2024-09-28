@@ -822,7 +822,20 @@ function Home() {
 
   return (
     <>
-      <div className='top-20 right-4 fixed flex flex-col gap-4'></div>
+      <a
+        className='text-white md:block hidden underline fixed bottom-4 left-4'
+        href='https://buymeacoffee.com/noahbaron'
+        target='_blank'
+      >
+        buy me a coffee
+      </a>
+      <a
+        className='text-white md:block hidden underline fixed bottom-4 right-4'
+        href='https://nbaron.com/'
+        target='_blank'
+      >
+        built by nbaron
+      </a>
       <div className='h-screen flex flex-col overflow-x-clip justify-between px-5 py-4 w-screen'>
         <div className='flex flex-col gap-2'>
           <div className='flex justify-between'>
