@@ -826,6 +826,7 @@ function Home() {
         className='text-white md:block hidden underline fixed bottom-4 left-4'
         href='https://buymeacoffee.com/noahbaron'
         target='_blank'
+        rel='noreferrer'
       >
         buy me a coffee
       </a>
@@ -833,6 +834,7 @@ function Home() {
         className='text-white md:block hidden underline fixed bottom-4 right-4'
         href='https://nbaron.com/'
         target='_blank'
+        rel='noreferrer'
       >
         built by nbaron
       </a>
