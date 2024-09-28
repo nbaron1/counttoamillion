@@ -35,24 +35,14 @@ app.use(
 );
 
 app.use((req, res, next) => {
+  if (req.path === '/health') {
+    next();
+    return;
+  }
+
   const origin = req.headers.origin;
 
   if (!origin) {
-    return res.sendStatus(401);
-  }
-
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Expose-Headers', 'Location');
-  }
-  next();
-});
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  if (!origin || !allowedOrigins.includes(origin)) {
     return res.sendStatus(401);
   }
 
