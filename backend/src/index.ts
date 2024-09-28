@@ -26,6 +26,14 @@ const allowedOrigins =
     ? ['http://localhost:3000']
     : ['https://counttoamillion.com', 'https://www.counttoamillion.com'];
 
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    exposedHeaders: ['Location'],
+  })
+);
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
@@ -43,9 +51,11 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
   if (!origin || !allowedOrigins.includes(origin)) {
-    return res.status(401).sendStatus(401);
+    return res.sendStatus(401);
   }
+
   next();
 });
 
