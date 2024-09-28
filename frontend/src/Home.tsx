@@ -7,7 +7,6 @@ import React, {
 } from 'react';
 import './dialog.css';
 import './hide-scrollbar.css';
-import { Turnstile } from '@marsidev/react-turnstile';
 import { config } from './lib/config';
 import { authAxios } from './lib/axios';
 import { useUser } from './context/User';
@@ -745,7 +744,6 @@ function Home() {
   const subscribe = useSubscribe();
   const { user } = useUser();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [turnstileError, setTurnstileError] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribe('score', (data) => {
@@ -812,10 +810,6 @@ function Home() {
     setCurrentNumberInput('');
   };
 
-  const handleSuccess = async (token: string) => {
-    sendMessage(JSON.stringify({ type: 'verify', token }));
-  };
-
   const handleKeyDown: React.HTMLAttributes<HTMLInputElement>['onKeyDown'] = (
     event
   ) => {
@@ -858,44 +852,25 @@ function Home() {
         </div>
 
         <div className='fixed bottom-3 left-3 right-3 md:left-1/2 md:bottom-6 md:-translate-x-1/2 md:w-[350px] md:right-auto'>
-          {isVerificationRequired ? (
-            <div className='flex flex-col gap-2'>
-              <Turnstile
-                siteKey={config.turnstileSiteKey}
-                onSuccess={handleSuccess}
-                onError={() => setTurnstileError(true)}
-                options={{ size: 'flexible', theme: 'light' }}
-              />
-              {turnstileError && (
-                <button
-                  className='w-full rounded-lg py-3 bg-secondary border border-tertiary text-white'
-                  onClick={() => window.location.reload()}
-                >
-                  Retry verification
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className='relative'>
-              <input
-                type='text'
-                placeholder='Write next number'
-                value={currentNumberInput}
-                ref={inputRef}
-                onChange={(event) => setCurrentNumberInput(event.target.value)}
-                autoFocus
-                className='fade-in placeholder:text-gray-200 rounded-2xl h-[60px] outline-none bg-secondary px-5 w-full border text-white border-tertiary'
-                onKeyDown={handleKeyDown}
-              />
-              <button
-                className='text-white bg-primary flex items-center justify-center bottom-3 top-3 absolute right-3 w-9 h-9 rounded-lg'
-                onClick={handleSubmit}
-                aria-label='Submit'
-              >
-                <ChevronUp />
-              </button>
-            </div>
-          )}
+          <div className='relative'>
+            <input
+              type='text'
+              placeholder='Write next number'
+              value={currentNumberInput}
+              ref={inputRef}
+              onChange={(event) => setCurrentNumberInput(event.target.value)}
+              autoFocus
+              className='fade-in placeholder:text-gray-200 rounded-2xl h-[60px] outline-none bg-secondary px-5 w-full border text-white border-tertiary'
+              onKeyDown={handleKeyDown}
+            />
+            <button
+              className='text-white bg-primary flex items-center justify-center bottom-3 top-3 absolute right-3 w-9 h-9 rounded-lg'
+              onClick={handleSubmit}
+              aria-label='Submit'
+            >
+              <ChevronUp />
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -1,21 +1,20 @@
-import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import vitePluginBundleObfuscator from 'vite-plugin-bundle-obfuscator';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    sentryVitePlugin({
-      org: 'folds-fp',
-      project: 'counttoamillion-frontend',
-      url: 'https://sentry.io/',
+    vitePluginBundleObfuscator({
+      enable: true,
+      log: true,
+      autoExcludeNodeModules: true,
+      excludes: [],
+      options: {},
     }),
   ],
   server: {
     port: 3000,
-  },
-  build: {
-    sourcemap: true,
   },
 });
