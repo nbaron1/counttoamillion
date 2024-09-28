@@ -465,7 +465,7 @@ const LeadboardDialogContent = forwardRef<
                 {username}
               </span>
             </p>
-            <p>{score}</p>
+            <p>{score.toLocaleString()}</p>
           </div>
         );
       })}
