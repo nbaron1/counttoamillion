@@ -50,7 +50,7 @@ app.get('/health', (_, res) => {
   res.send('OK');
 });
 
-app.get('/users', protectRoute, getUsers);
+// app.get('/users', protectRoute, getUsers);
 app.get('/users/count', protectRoute, getUsersCount);
 app.get('/game-status', getGameStatus);
 app.get('/users/me', protectRoute, getRequestedUser);
