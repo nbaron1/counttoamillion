@@ -489,7 +489,7 @@ function PageNumbers({
   if (numberOfPages && numberOfPages > 5) {
     return (
       <Slider
-        className='w-36  self-center flex items-center px-4 justify-center'
+        className='w-[180px]  self-center flex items-center px-2 justify-center'
         slidesPerRow={5}
         ref={sliderRef}
       >
@@ -498,7 +498,7 @@ function PageNumbers({
             <button
               onClick={() => setPage(index + 1)}
               className={twMerge([
-                'w-6 h-6 bg-secondary flex items-center justify-center',
+                'w-10 h-6 bg-secondary flex items-center justify-center',
                 index + 1 === page && 'underline',
               ])}
               key={index}
@@ -519,7 +519,7 @@ function PageNumbers({
             <button
               onClick={() => setPage(index + 1)}
               className={twMerge([
-                'w-6 h-6 bg-secondary flex items-center justify-center',
+                'w-10 h-6 bg-secondary flex items-center justify-center',
                 index + 1 === page && 'underline',
               ])}
               key={index}
