@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { authAxios } from './lib/axios';
 import { Spinner } from './Home';
-
+import { Fireworks } from '@fireworks-js/react';
 const getGameStatus = async () => {
   try {
     const response = await authAxios.get('/game-status');
@@ -125,10 +125,16 @@ export function GameOver() {
   const timeTakenString = getTimeTakenString(diffInMs);
 
   return (
-    <p className='fixed text-3xl text-white left-5 right-5 sm:text-center sm:left-12 sm:right-12 md:left-1/2 md:right-auto md:-translate-x-1/2 -translate-y-3/4 md:max-w-[750px] top-1/2'>
-      This website was been beaten by {winner.username} in
-      <br />
-      {timeTakenString}
-    </p>
+    <>
+      <Fireworks
+        className='fixed top-0 left-0 bottom-0 right-0'
+        options={{ mouse: { click: true } }}
+      />
+      <p className='fixed text-3xl text-white left-5 right-5 sm:text-center sm:left-12 sm:right-12 md:left-1/2 md:right-auto md:-translate-x-1/2 -translate-y-3/4 md:max-w-[750px] top-1/2'>
+        This website was been beaten by {winner.username} in
+        <br />
+        {timeTakenString}
+      </p>
+    </>
   );
 }
