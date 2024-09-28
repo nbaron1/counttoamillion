@@ -99,6 +99,9 @@ export const handleWebsocket: WebsocketRequestHandler = async (ws, request) => {
           if (currentCount + 1 >= ONE_MILLION) {
             await sql`update game_status set ended_at = now() at time zone 'utc', winner_id = ${user.id} where id = 1`;
             await redisClient.publish('game-over', '1');
+
+            ws.send(JSON.stringify({ type: 'game-over' }));
+
             return;
           }
         }
