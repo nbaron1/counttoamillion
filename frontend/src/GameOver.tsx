@@ -131,7 +131,7 @@ export function GameOver() {
         options={{ mouse: { click: true } }}
       />
       <p className='fixed text-3xl text-white left-5 right-5 sm:text-center sm:left-12 sm:right-12 md:left-1/2 md:right-auto md:-translate-x-1/2 -translate-y-3/4 md:max-w-[750px] top-1/2'>
-        This website was been beaten by {winner.username} in
+        This website was been beaten by "{winner.username}" in
         <br />
         {timeTakenString}
       </p>

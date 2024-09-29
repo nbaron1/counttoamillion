@@ -81,7 +81,7 @@ export function App() {
         options={{ mouse: { click: true } }}
       />
       <p className='fixed text-3xl text-white left-5 right-5 sm:text-center sm:left-12 sm:right-12 md:left-1/2 md:right-auto md:-translate-x-1/2 -translate-y-3/4 md:max-w-[750px] top-1/2'>
-        This website was been beaten by x.com/x_ssc in
+        This website was been beaten by "x.com/x_ssc" in
         <br />0 days, 6 hours, 25 minutes, and 1 second
       </p>
       <a
